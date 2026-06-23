@@ -10,7 +10,7 @@ import uuid
 
 Base = declarative_base()
 
-class Themes(Base):
+class Theme(Base):
     __tablename__ = "themes"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -18,7 +18,7 @@ class Themes(Base):
     target_language = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-class Sessions(Base):
+class Session(Base):
     __tablename__ = "sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -30,7 +30,7 @@ class Sessions(Base):
         Index('idx_session_theme', 'theme_id'),
     )
 
-class VocabEntries(Base):
+class VocabEntry(Base):
     __tablename__ = "vocab_entries"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
