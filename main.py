@@ -34,9 +34,24 @@ async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db
                 }
             )
 
-    result = response.json()["data"]["translations"][0]
-    translatedText = result["translatedText"]
-    detectedSourceLanguage = result["detectedSourceLanguage"]
+        result = response.json()["data"]["translations"][0]
+        detectedSourceLanguage = result["detectedSourceLanguage"]
+
+        if detectedSourceLanguage == theme.target_language:
+            response = await client.post(
+                "https://translation.googleapis.com/language/translate/v2",
+                params={"key": api_key},
+                json={
+                    "q": request.text,
+                    "source": theme.target_language,
+                    "target": "ko",
+                    "format": "text"
+                }
+            )
+            
+            result = response.json()["data"]["translations"][0]
+
+        translatedText = result["translatedText"]
     
     if detectedSourceLanguage == theme.target_language:
         text_native = translatedText 
@@ -56,4 +71,5 @@ async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db
     await db.commit()
     await db.refresh(entry)
 
+    print(response.json())
     return entry
