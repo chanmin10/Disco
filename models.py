@@ -1,12 +1,14 @@
-from datetime import timezone
-from re import I
+# Standard Library
+from datetime import timezone   # Required for timezone-aware datetime fields
+from re import I                # Case-insensitive flag for Regular Expression
+import uuid                     # Generates uuid
 
-from sqlalchemy import CheckConstraint, Column, String, Integer, DateTime, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.sql import func
-from sqlalchemy import Index
-import uuid
+# SQLAlchemy Package - Parsing Class to PostgreSQL
+from sqlalchemy import CheckConstraint, Column, String, Integer, DateTime, Text, ForeignKey # Core components for defining table schemas
+from sqlalchemy.dialects.postgresql import UUID             # PostgreSQL-specific UUID data type
+from sqlalchemy.orm import declarative_base                 # Function to create the base class for ORM models
+from sqlalchemy.sql import func                             # Provides built-in SQL functions
+from sqlalchemy import Index                                # Required to create database indexes
 
 Base = declarative_base()
 
@@ -38,6 +40,7 @@ class VocabEntry(Base):
     session_id = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"))
     word_native = Column(Text, nullable=False)
     word_target = Column(Text, nullable=False)
+    example_sentence = Column(Text)
     source_engine = Column(Text, CheckConstraint("source_engine IN ('translation', 'gemini')"), nullable=False)
     language_pair = Column(Text, nullable=False)
     review_count = Column(Integer, nullable=False, default=0)

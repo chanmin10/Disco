@@ -12,5 +12,5 @@ class TranslateResponse(BaseModel):
     word_target: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    class Config:       # Inner class for Configuration
+        from_attributes = True      # Allows the model to read data directly from SQLAlchemy

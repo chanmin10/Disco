@@ -9,6 +9,10 @@ import sys
 import os
 from dotenv import load_dotenv
 
+from models import Base
+
+from sqlalchemy import create_engine
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -31,8 +35,6 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 
 sys.path.insert(0, os.getcwd())     #search Current Working Directory for library     
-
-from models import Base
 
 target_metadata = Base.metadata
 
@@ -73,11 +75,10 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    sync_url = os.environ["DATABASE_URL"].replace(
+        "postgresql+asyncpg://", "postgresql+psycopg2://"
+        )
+    connectable = create_engine(sync_url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(

@@ -50,6 +50,7 @@ async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db
             )
             
             result = response.json()["data"]["translations"][0]
+            detectedSourceLanguage = result["detectedSourceLanguage"]
 
         translatedText = result["translatedText"]
     
@@ -71,5 +72,12 @@ async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db
     await db.commit()
     await db.refresh(entry)
 
-    print(response.json())
     return entry
+
+
+@app.patch("/translate/{entry_id}/gemini")
+async def translate_gemini(entry_id: UUID, db: AsyncSession = Depends(get_db)):
+    entry = await db.get(VocabEntry, entry_id)
+
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
