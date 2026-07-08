@@ -42,11 +42,9 @@ class VocabEntry(Base):
     word_target = Column(Text, nullable=False)
     example_sentence = Column(Text)
     source_engine = Column(Text, CheckConstraint("source_engine IN ('translation', 'gemini')"), nullable=False)
-    language_pair = Column(Text, nullable=False)
     review_count = Column(Integer, nullable=False, default=0)
     last_reviewed_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     __table_args__ = (
-        Index('idx_vocab_theme', 'theme_id'),
-    )
+        Index('idx_vocab_theme', 'theme_id'),    )

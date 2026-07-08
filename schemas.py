@@ -1,16 +1,26 @@
 from pydantic import BaseModel
 from uuid import UUID
-from datetime import datetime
 
 class TranslateRequest(BaseModel):
-    text: str
     theme_id: UUID
+    text: str
 
 class TranslateResponse(BaseModel):
-    id: UUID
-    word_native: str
-    word_target: str
-    created_at: datetime
+    response: str
+    text_native: str
+    text_target: str
 
-    class Config:       # Inner class for Configuration
-        from_attributes = True      # Allows the model to read data directly from SQLAlchemy
+class ClassifyRequest(BaseModel):
+    theme_id: UUID
+    text_native: str
+    text_target: str
+
+class ClassifyResponse(BaseModel):
+    is_vocab: bool
+
+class LLMRequest(BaseModel):
+    theme_id: UUID
+    text: str
+
+class LLMResponse(BaseModel):
+    text: str
