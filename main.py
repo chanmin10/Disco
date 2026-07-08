@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from database import get_db
 from models import Theme, VocabEntry
-from schemas import TranslateRequest, TranslateResponse, ClassifyRequest, ClassifyResponse
+from schemas import TranslateRequest, TranslateResponse, ClassifyRequest, ClassifyResponse, LLMRequest, LLMResponse
 from prompts import VOCAB_CLASSIFIER_PROMPT, GEMINI_TRANSLATE_PROMPT
 import httpx
 import os
@@ -54,7 +54,6 @@ async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db
             )
             
             result = response.json()["data"]["translations"][0]
-            detectedSourceLanguage = result["detectedSourceLanguage"]
             translatedText = result["translatedText"]
 
             text_native, text_target = translatedText, request.text 
@@ -80,13 +79,13 @@ async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db))
 
     gemini_key = os.environ["GEMINI_API_KEY"]
     prompt = VOCAB_CLASSIFIER_PROMPT\
-            .replace("{{LANGUAGE_PAIR}}", f"ko-{theme.target_language}")\
-            .replace("{{TEXT_NATIVE}}", request.text_native)\
-            .replace("{{TEXT_TARGET}}", request.text_target)
+            .replace("{{language_pair}}", f"ko-{theme.target_language}")\
+            .replace("{{text_native}}", request.text_native)\
+            .replace("{{text_target}}", request.text_target)
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         gemini_response = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}",
             json={
                 "contents": [                        
                     {
@@ -97,6 +96,7 @@ async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db))
         )
         
         response_text = gemini_response.json()["candidates"][0]["content"]["parts"][0]["text"]
+        print(response_text)
         parsed = json.loads(response_text)
 
         if parsed["is_vocab"]:
@@ -110,7 +110,49 @@ async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db))
             await db.commit()
             await db.refresh(entry)
         
-        return ClassifyResponse(
-                    is_vocab = parsed["is_vocab"]
-                )
+        return ClassifyResponse(is_vocab = parsed["is_vocab"])
 
+@app.post("/translate/ai", response_model=LLMResponse)
+async def translate_ai(request: LLMRequest, db: AsyncSession = Depends(get_db)):
+    theme = await db.get(Theme, request.theme_id)
+
+    if theme is None:
+        raise HTTPException(status_code=404, detail="Theme not found")
+
+    gemini_key = os.environ["GEMINI_API_KEY"]
+    prompt = GEMINI_TRANSLATE_PROMPT\
+            .replace("{{title}}", theme.name)\
+            .replace("{{native_language}}", "ko")\
+            .replace("{{target_language}}", theme.target_language)\
+            .replace("{{input}}", request.text)
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        gemini_response = await client.post(
+             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}",
+             json={
+                 "contents": [
+                     {
+                         "parts": [{"text": prompt}]
+                     }
+                 ]
+             }
+        )
+        response_text = gemini_response.json()["candidates"][0]["content"]["parts"][0]["text"]
+        splited_text = response_text.split("```")
+        parsed_text = splited_text[0]
+        parsed_json = splited_text[1].replace("json\n", "", 1)
+        converted_json = json.loads(parsed_json)
+
+        if(converted_json["is_vocab"]):
+            entry = VocabEntry(
+                theme_id = request.theme_id,
+                word_native = converted_json["word_native"],
+                word_target = converted_json["word_target"],
+                example_sentence = converted_json["example_sentence"],
+                source_engine = "gemini"
+            )
+            db.add(entry)
+            await db.commit()
+            await db.refresh(entry)
+
+        return LLMResponse(text = parsed_text)

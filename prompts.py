@@ -3,15 +3,17 @@ VOCAB_CLASSIFIER_PROMPT = """
 You are a linguistic analyzer. Determine if the provided text pair represents a "Word/Idiom" (dictionary entry, fixed/figurative meaning) or a "Literal Sentence" (general conversation, literal meaning).
 
 [Input]
-Language Pair: {{LANGUAGE_PAIR}}
-Native: "{{TEXT_NATIVE}}"
-Target: "{{TEXT_TARGET}}"
+Language Pair: {{language_pair}}
+Native: "{{text_native}}"
+Target: "{{text_target}}"
 
 Output strictly in this minimal JSON format:
 {
   "is_vocab": true/false,
   "reason": "Max 5 words explanation"
 }
+
+Output ONLY the raw JSON object. Do not wrap it in markdown code blocks or add any extra text.
 """
 
 GEMINI_TRANSLATE_PROMPT = """
