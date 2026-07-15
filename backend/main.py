@@ -112,8 +112,8 @@ async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db))
         
         return ClassifyResponse(is_vocab = parsed["is_vocab"])
 
-@app.post("/translate/ai", response_model=LLMResponse)
-async def translate_ai(request: LLMRequest, db: AsyncSession = Depends(get_db)):
+@app.post("/translate/llm", response_model=LLMResponse)
+async def translate_llm(request: LLMRequest, db: AsyncSession = Depends(get_db)):
     theme = await db.get(Theme, request.theme_id)
 
     if theme is None:
