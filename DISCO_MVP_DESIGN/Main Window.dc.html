@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  body { margin: 0; }
+  * { box-sizing: border-box; }
+  a { color: #0A84FF; text-decoration: none; }
+  a:hover { color: #0A84FF; opacity: 0.8; }
+  @keyframes discoDotPulse { 0%,80%,100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
+  @keyframes discoPopIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+</style>
+</helmet>
+<div style="width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#e7e7ea;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;padding:40px;">
+  <div style="width:1180px;height:760px;border-radius:12px;overflow:hidden;background:#ffffff;box-shadow:0 1px 0 rgba(0,0,0,0.06), 0 30px 60px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06);display:flex;flex-direction:column;position:relative;">
+    <div style="height:52px;flex-shrink:0;display:flex;align-items:center;border-bottom:1px solid rgba(0,0,0,0.08);background:#F7F7F8;">
+      <div style="width:160px;flex-shrink:0;height:100%;display:flex;align-items:center;gap:8px;padding-left:20px;border-right:1px solid rgba(0,0,0,0.08);box-sizing:border-box;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#FF5F57;"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:#FEBC2E;"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:#28C840;"></div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:10px;padding:0 16px;min-width:0;">
+        <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" onClick="{{ toggleLeftSidebar }}" style-hover="background:rgba(0,0,0,0.06);">
+          <svg width="16" height="14" viewBox="0 0 16 14" fill="none"><rect x="1" y="1" width="14" height="12" rx="2.5" stroke="#6e6e73" stroke-width="1.3"></rect><line x1="5.5" y1="1.3" x2="5.5" y2="12.7" stroke="#6e6e73" stroke-width="1.3"></line><rect x="1.8" y="1.8" width="3" height="10.4" rx="1" fill="#6e6e73" fill-opacity="0.55"></rect></svg>
+        </div>
+        <div style="font-size:15px;font-weight:600;color:#1d1d1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ roomName }}</div>
+        <div style="flex:1;"></div>
+        <dc-import name="SegmentedControl" value="{{ engine }}" on-change="{{ setEngine }}" hint-size="170px,32px"></dc-import>
+        <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" onClick="{{ toggleRightSidebar }}" style-hover="background:rgba(0,0,0,0.06);">
+          <svg width="16" height="14" viewBox="0 0 16 14" fill="none"><rect x="1" y="1" width="14" height="12" rx="2.5" stroke="#6e6e73" stroke-width="1.3"></rect><line x1="10.5" y1="1.3" x2="10.5" y2="12.7" stroke="#6e6e73" stroke-width="1.3"></line><rect x="11.2" y="1.8" width="3" height="10.4" rx="1" fill="#6e6e73" fill-opacity="0.55"></rect></svg>
+        </div>
+      </div>
+      <div style="width:{{ headerRightWidth }};flex-shrink:0;height:100%;padding-left:{{ headerRightPadding }};box-sizing:border-box;border-left:{{ headerRightBorder }};display:flex;align-items:center;overflow:hidden;white-space:nowrap;transition:width 0.2s ease;">
+        <span style="font-size:13px;font-weight:600;color:#6e6e73;">단어장</span>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;min-height:0;position:relative;">
+      <div style="width:{{ leftSidebarWidth }};flex-shrink:0;overflow:hidden;background:#F5F5F7;border-right:{{ leftSidebarBorder }};display:flex;flex-direction:column;min-height:0;transition:width 0.2s ease;">
+        <div style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:2px;">
+          <sc-for list="{{ roomRows }}" as="room" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:8px;padding:{{ room.rowPad }};border-radius:7px;cursor:pointer;background:{{ room.rowBg }};" onClick="{{ room.onSelect }}">
+              
+              <span style="font-size:13px;color:{{ room.nameColor }};font-weight:{{ room.nameWeight }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ room.name }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="position:relative;flex-shrink:0;border-top:1px solid rgba(0,0,0,0.08);">
+          <sc-if value="{{ newRoomPickerOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:fixed;inset:0;z-index:40;" onClick="{{ closeNewRoomPicker }}"></div>
+            <div style="position:absolute;left:8px;right:8px;bottom:44px;background:#ffffff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.18),0 0 0 1px rgba(0,0,0,0.06);overflow:hidden;z-index:41;animation:discoPopIn 0.15s ease-out;">
+              <sc-for list="{{ newRoomOptions }}" as="opt" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;" onClick="{{ opt.onPick }}" style-hover="background:rgba(0,0,0,0.045);">
+                  <div style="width:16px;height:16px;border-radius:50%;background:{{ opt.tint }};flex-shrink:0;"></div>
+                  <span style="font-size:12.5px;color:#1d1d1f;">{{ opt.name }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;" onClick="{{ toggleNewRoomPicker }}" style-hover="background:rgba(0,0,0,0.04);">
+            <div style="width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="#a1a1a6" stroke-width="1.3"></circle><path d="M8 5v6M5 8h6" stroke="#a1a1a6" stroke-width="1.3" stroke-linecap="round"></path></svg>
+            </div>
+            <span style="font-size:12.5px;color:#a1a1a6;font-weight:500;">새 채팅방</span>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;background:#ffffff;">
+        <div ref="{{ messagesRef }}" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px;min-height:0;">
+          <sc-for list="{{ messages }}" as="msg" hint-placeholder-count="4">
+            <div style="display:flex;justify-content:{{ msg.justify }};">
+              <div style="max-width:70%;padding:{{ msg.bubblePad }};border-radius:{{ msg.bubbleRadius }};background:{{ msg.bubbleBg }};color:{{ msg.bubbleColor }};font-size:14px;line-height:1.4;word-break:break-word;">{{ msg.text }}</div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ isTranslating }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;justify-content:flex-start;">
+              <div style="padding:11px 16px;border-radius:15px 15px 15px 4px;background:#F0F0F2;display:flex;gap:4px;align-items:center;">
+                <span style="width:6px;height:6px;border-radius:50%;background:#9a9aa0;display:inline-block;animation:discoDotPulse 1.1s infinite;"></span>
+                <span style="width:6px;height:6px;border-radius:50%;background:#9a9aa0;display:inline-block;animation:discoDotPulse 1.1s infinite 0.15s;"></span>
+                <span style="width:6px;height:6px;border-radius:50%;background:#9a9aa0;display:inline-block;animation:discoDotPulse 1.1s infinite 0.3s;"></span>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex-shrink:0;border-top:1px solid rgba(0,0,0,0.08);padding:12px 16px;display:flex;gap:10px;align-items:center;">
+          <input type="text" value="{{ input }}" onChange="{{ onInputChange }}" onKeyDown="{{ onInputKeyDown }}" placeholder="번역할 텍스트 입력" style="flex:1;border:1px solid rgba(0,0,0,0.12);border-radius:9px;padding:10px 13px;font-size:14px;font-family:inherit;outline:none;background:#F5F5F7;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;">
+          <div style="width:34px;height:34px;border-radius:50%;background:{{ accent }};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;opacity:{{ sendOpacity }};" onClick="{{ sendMessage }}">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 13V3M8 3L3.5 7.5M8 3l4.5 4.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+        </div>
+      </div>
+      <div style="width:{{ rightSidebarWidth }};flex-shrink:0;overflow:hidden;background:#FAFAFA;border-left:{{ rightSidebarBorder }};display:flex;flex-direction:column;min-height:0;transition:width 0.2s ease;">
+        <sc-if value="{{ hasVocab }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;">
+            <sc-for list="{{ vocabRows }}" as="v" hint-placeholder-count="3">
+              <div style="perspective:700px;">
+                <div style="position:relative;height:34px;cursor:pointer;transform-style:preserve-3d;transition:transform 0.45s cubic-bezier(0.4,0.2,0.2,1);transform:{{ v.flipTransform }};" onClick="{{ v.onFlip }}">
+                  <div style="position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:8px;background:{{ v.frontBg }};box-shadow:0 0 0 1px rgba(0,0,0,0.07);display:flex;align-items:center;justify-content:center;padding:2px 8px;text-align:center;">
+                    <span style="font-size:12.5px;font-weight:600;color:#1d1d1f;">{{ v.word }}</span>
+                  </div>
+                  <div style="position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:8px;background:{{ accent }};transform:rotateY(180deg);display:flex;align-items:center;justify-content:center;padding:2px 8px;text-align:center;">
+                    <span style="font-size:12px;font-weight:600;color:#ffffff;">{{ v.sub }}</span>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ vocabEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M7 4a2 2 0 012-2h6a2 2 0 012 2v16l-5-3.2L7 20V4z" stroke="#c9c9ce" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"></path></svg>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span style="font-size:13px;font-weight:700;color:#3a3a3c;">아직 저장된 단어가 없어요</span>
+              <span style="font-size:11px;color:#9a9aa0;line-height:1.5;">채팅에서 번역한 단어가<br/>자동으로 여기 쌓여요</span>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;blue&quot;, &quot;options&quot;: [&quot;blue&quot;,&quot;purple&quot;,&quot;pink&quot;,&quot;red&quot;,&quot;orange&quot;,&quot;yellow&quot;,&quot;green&quot;,&quot;graphite&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}, &quot;density&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;comfortable&quot;, &quot;options&quot;: [&quot;comfortable&quot;,&quot;compact&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}}">
+class Component extends DCLogic {
+  accentMap = { blue:'#0A84FF', purple:'#AF52DE', pink:'#FF375F', red:'#FF453A', orange:'#FF9F0A', yellow:'#FFD60A', green:'#32D74B', graphite:'#8E8E93' };
+
+  newRoomOptions = [
+    { id:'travel', name:'여행', code:'여', tint:'#4CAF6D' },
+    { id:'shopping', name:'쇼핑', code:'쇼', tint:'#C97B3D' },
+    { id:'school', name:'학교', code:'학', tint:'#3DBFC9' },
+  ];
+
+  messagesRef = React.createRef();
+
+  state = {
+    activeRoomId: 'programming',
+    engine: 'general',
+    input: '',
+    isTranslating: false,
+    newRoomPickerOpen: false,
+    leftSidebarOpen: true,
+    rightSidebarOpen: true,
+    flippedVocab: {},
+    rooms: [
+      {
+        id:'programming', name:'프로그래밍', code:'프', tint:'#5B8DEF',
+        phrasebook: [
+          {src:'버그', tgt:'bug', pron:'버그'},
+          {src:'배포', tgt:'deploy', pron:'디플로이'},
+          {src:'함수', tgt:'function', pron:'펑션'},
+          {src:'변수', tgt:'variable', pron:'베리어블'},
+          {src:'병합 충돌', tgt:'merge conflict', pron:'머지 컨플릭트'},
+          {src:'리팩토링', tgt:'refactoring', pron:'리팩토링'},
+        ],
+        messages: [
+          {id:'p-u1', role:'user', text:'버그'},
+          {id:'p-b1', role:'bot', text:'bug'},
+          {id:'p-u2', role:'user', text:'배포'},
+          {id:'p-b2', role:'bot', text:'deploy'},
+          {id:'p-u3', role:'user', text:'함수'},
+          {id:'p-b3', role:'bot', text:'function'},
+          {id:'p-u4', role:'user', text:'변수'},
+          {id:'p-b4', role:'bot', text:'variable'},
+        ],
+        vocab: [
+          {id:'p-v4', word:'variable', sub:'변수', isNew:false},
+          {id:'p-v3', word:'function', sub:'함수', isNew:false},
+          {id:'p-v2', word:'deploy', sub:'배포', isNew:false},
+          {id:'p-v1', word:'bug', sub:'버그', isNew:false},
+        ],
+      },
+      {
+        id:'daily', name:'일상', code:'일', tint:'#F2B84B',
+        phrasebook: [
+          {src:'배고프다', tgt:'hungry', pron:'헝그리'},
+          {src:'피곤하다', tgt:'exhausted', pron:'익조스티드'},
+          {src:'이따 봐', tgt:'see you later', pron:'씨 유 레이터'},
+          {src:'감기 걸리다', tgt:'catch a cold', pron:'캐치 어 콜드'},
+          {src:'날씨', tgt:'weather', pron:'웨더'},
+        ],
+        messages: [
+          {id:'d-u1', role:'user', text:'배고프다'},
+          {id:'d-b1', role:'bot', text:'hungry'},
+          {id:'d-u2', role:'user', text:'피곤하다'},
+          {id:'d-b2', role:'bot', text:'exhausted'},
+          {id:'d-u3', role:'user', text:'이따 봐'},
+          {id:'d-b3', role:'bot', text:'see you later'},
+          {id:'d-u4', role:'user', text:'감기 걸리다'},
+          {id:'d-b4', role:'bot', text:'catch a cold'},
+        ],
+        vocab: [
+          {id:'d-v4', word:'catch a cold', sub:'감기 걸리다', isNew:false},
+          {id:'d-v3', word:'see you later', sub:'이따 봐', isNew:false},
+          {id:'d-v2', word:'exhausted', sub:'피곤하다', isNew:false},
+          {id:'d-v1', word:'hungry', sub:'배고프다', isNew:false},
+        ],
+      },
+      {
+        id:'business', name:'비즈니스', code:'비', tint:'#E8746C',
+        phrasebook: [
+          {src:'마감일', tgt:'deadline', pron:'데드라인'},
+          {src:'예산', tgt:'budget', pron:'버짓'},
+          {src:'회의', tgt:'meeting', pron:'미팅'},
+          {src:'첨부파일', tgt:'attachment', pron:'어태치먼트'},
+          {src:'연락하다', tgt:'touch base', pron:'터치 베이스'},
+        ],
+        messages: [
+          {id:'b-u1', role:'user', text:'마감일'},
+          {id:'b-b1', role:'bot', text:'deadline'},
+          {id:'b-u2', role:'user', text:'예산'},
+          {id:'b-b2', role:'bot', text:'budget'},
+          {id:'b-u3', role:'user', text:'회의'},
+          {id:'b-b3', role:'bot', text:'meeting'},
+          {id:'b-u4', role:'user', text:'연락하다'},
+          {id:'b-b4', role:'bot', text:'touch base'},
+        ],
+        vocab: [
+          {id:'b-v4', word:'touch base', sub:'연락하다', isNew:false},
+          {id:'b-v3', word:'meeting', sub:'회의', isNew:false},
+          {id:'b-v2', word:'budget', sub:'예산', isNew:false},
+          {id:'b-v1', word:'deadline', sub:'마감일', isNew:false},
+        ],
+      },
+    ],
+  };
+
+  componentDidMount() {
+    this._onKeyDown = (e) => {
+      if (e.key === 'Escape' && this.state.newRoomPickerOpen) this.setState({ newRoomPickerOpen:false });
+    };
+    document.addEventListener('keydown', this._onKeyDown);
+  }
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this._onKeyDown);
+  }
+  componentDidUpdate(prevProps, prevState) {
+    const active = this.getActiveRoom();
+    const prevActive = prevState.rooms.find(r => r.id === prevState.activeRoomId) || prevState.rooms[0];
+    if (this.messagesRef.current && (prevActive.messages.length !== active.messages.length || prevState.activeRoomId !== this.state.activeRoomId || prevState.isTranslating !== this.state.isTranslating)) {
+      this.messagesRef.current.scrollTop = this.messagesRef.current.scrollHeight;
+    }
+  }
+
+  accentHex() { return this.accentMap[this.props.accentColor ?? 'blue'] || '#0A84FF'; }
+  getActiveRoom() { return this.state.rooms.find(r => r.id === this.state.activeRoomId) || this.state.rooms[0]; }
+  updateRoom(id, fn) { this.setState(s => ({ rooms: s.rooms.map(r => r.id === id ? fn(r) : r) })); }
+  hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+
+  translateFor(room, textRaw) {
+    const text = (textRaw || '').trim();
+    const dict = room.phrasebook;
+    const hit = dict.find(p => text.length && (text.includes(p.src) || p.src.includes(text)));
+    if (hit) return { tgt: hit.tgt, pron: hit.pron, src: hit.src };
+    const pick = dict[this.hashStr(text || 'x') % dict.length];
+    return { tgt: pick.tgt, pron: pick.pron, src: text.length ? text : pick.src };
+  }
+
+  selectRoom = (id) => { this.setState({ activeRoomId: id, newRoomPickerOpen:false }); };
+  setEngine = (v) => { this.setState({ engine: v }); };
+  setInput = (v) => { this.setState({ input: v }); };
+
+  sendMessage = () => {
+    const text = this.state.input.trim();
+    if (!text || this.state.isTranslating) return;
+    const roomId = this.state.activeRoomId;
+    this.updateRoom(roomId, r => ({ ...r, messages: [...r.messages, { id: 'u' + Date.now(), role:'user', text }] }));
+    this.setState({ input:'', isTranslating:true });
+    setTimeout(() => {
+      const room = this.state.rooms.find(r => r.id === roomId);
+      if (!room) return;
+      const result = this.translateFor(room, text);
+      const vid = 'v' + Date.now();
+      this.updateRoom(roomId, r => ({
+        ...r,
+        messages: [...r.messages, { id:'b' + Date.now(), role:'bot', text: result.tgt }],
+        vocab: [{ id:vid, word: result.tgt, sub: result.src, isNew:true }, ...r.vocab],
+      }));
+      this.setState({ isTranslating:false });
+      setTimeout(() => {
+        this.updateRoom(roomId, r => ({ ...r, vocab: r.vocab.map(v => v.id === vid ? { ...v, isNew:false } : v) }));
+      }, 1500);
+    }, 650);
+  };
+
+  handleInputKeyDown = (e) => { if (e.key === 'Enter') this.sendMessage(); };
+
+  toggleNewRoomPicker = () => this.setState(s => ({ newRoomPickerOpen: !s.newRoomPickerOpen }));
+  closeNewRoomPicker = () => this.setState({ newRoomPickerOpen:false });
+  toggleLeftSidebar = () => this.setState(s => ({ leftSidebarOpen: !s.leftSidebarOpen }));
+  toggleRightSidebar = () => this.setState(s => ({ rightSidebarOpen: !s.rightSidebarOpen }));
+  toggleFlip(id) { this.setState(s => ({ flippedVocab: { ...s.flippedVocab, [id]: !s.flippedVocab[id] } })); }
+
+  addRoom(opt) {
+    const id = opt.id;
+    if (this.state.rooms.find(r => r.id === id)) { this.setState({ activeRoomId:id, newRoomPickerOpen:false }); return; }
+    const newRoom = { id, name:opt.name, code:opt.code, tint:opt.tint, phrasebook:[{src:'안녕하세요', tgt:'Hello', pron:'헬로우'}], messages: [], vocab: [] };
+    this.setState(s => ({ rooms: [...s.rooms, newRoom], activeRoomId:id, newRoomPickerOpen:false }));
+  }
+
+  renderVals() {
+    const accent = this.accentHex();
+    const density = this.props.density === 'compact' ? 'compact' : 'comfortable';
+    const active = this.getActiveRoom();
+    const rowPadY = density === 'compact' ? 6 : 9;
+    const bubblePad = density === 'compact' ? '7px 12px' : '9px 14px';
+
+    const roomRows = this.state.rooms.map(r => {
+      const isActive = r.id === active.id;
+      return {
+        id: r.id, name: r.name, code: r.code,
+        rowBg: isActive ? accent : 'transparent',
+        rowPad: rowPadY + 'px 12px',
+        nameColor: isActive ? '#ffffff' : '#1d1d1f',
+        nameWeight: isActive ? 600 : 500,
+        avatarBg: isActive ? 'rgba(255,255,255,0.28)' : r.tint,
+        avatarColor: '#ffffff',
+        onSelect: () => this.selectRoom(r.id),
+      };
+    });
+
+    const messages = active.messages.map(m => {
+      const isUser = m.role === 'user';
+      return {
+        id: m.id, text: m.text,
+        justify: isUser ? 'flex-end' : 'flex-start',
+        bubbleBg: isUser ? accent : '#F0F0F2',
+        bubbleColor: isUser ? '#ffffff' : '#1d1d1f',
+        bubbleRadius: isUser ? '15px 15px 4px 15px' : '15px 15px 15px 4px',
+        bubblePad,
+      };
+    });
+
+    const vocabRows = active.vocab.map(v => ({
+      id: v.id, word: v.word, sub: v.sub,
+      frontBg: v.isNew ? accent + '1c' : '#ffffff',
+      flipTransform: this.state.flippedVocab[v.id] ? 'rotateY(180deg)' : 'rotateY(0deg)',
+      onFlip: () => this.toggleFlip(v.id),
+    }));
+
+    return {
+      accent,
+      roomName: active.name,
+      roomRows,
+      messages,
+      isTranslating: this.state.isTranslating,
+      messagesRef: this.messagesRef,
+      vocabRows,
+      hasVocab: active.vocab.length > 0,
+      vocabEmpty: active.vocab.length === 0,
+      input: this.state.input,
+      onInputChange: (e) => this.setInput(e.target.value),
+      onInputKeyDown: this.handleInputKeyDown,
+      sendMessage: this.sendMessage,
+      sendOpacity: (this.state.input.trim().length > 0 && !this.state.isTranslating) ? 1 : 0.35,
+      engine: this.state.engine,
+      setEngine: this.setEngine,
+      newRoomPickerOpen: this.state.newRoomPickerOpen,
+      toggleNewRoomPicker: this.toggleNewRoomPicker,
+      closeNewRoomPicker: this.closeNewRoomPicker,
+      newRoomOptions: this.newRoomOptions.map(o => ({ ...o, onPick: () => this.addRoom(o) })),
+      leftSidebarOpen: this.state.leftSidebarOpen,
+      rightSidebarOpen: this.state.rightSidebarOpen,
+      leftSidebarWidth: this.state.leftSidebarOpen ? '160px' : '0px',
+      leftSidebarBorder: this.state.leftSidebarOpen ? '1px solid rgba(0,0,0,0.08)' : 'none',
+      rightSidebarWidth: this.state.rightSidebarOpen ? '200px' : '0px',
+      rightSidebarBorder: this.state.rightSidebarOpen ? '1px solid rgba(0,0,0,0.08)' : 'none',
+      headerRightWidth: this.state.rightSidebarOpen ? '200px' : '0px',
+      headerRightBorder: this.state.rightSidebarOpen ? '1px solid rgba(0,0,0,0.08)' : 'none',
+      headerRightPadding: this.state.rightSidebarOpen ? '16px' : '0px',
+      toggleLeftSidebar: this.toggleLeftSidebar,
+      toggleRightSidebar: this.toggleRightSidebar,
+    };
+  }
+}
+</script>
+</body>
+</html>

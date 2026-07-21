@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  body { margin: 0; }
+  * { box-sizing: border-box; }
+  a { color: #0A84FF; text-decoration: none; }
+  a:hover { color: #0A84FF; opacity: 0.8; }
+  @keyframes discoPopIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</helmet>
+<div style="width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#e7e7ea;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;padding:40px;">
+  <div style="width:600px;height:640px;border-radius:12px;overflow:hidden;background:#EDEDF0;box-shadow:0 1px 0 rgba(0,0,0,0.06), 0 30px 60px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06);display:flex;flex-direction:column;position:relative;">
+    <div style="height:52px;flex-shrink:0;display:flex;align-items:center;border-bottom:1px solid rgba(0,0,0,0.08);background:#F7F7F8;position:relative;">
+      <div style="width:160px;flex-shrink:0;height:100%;display:flex;align-items:center;gap:8px;padding-left:20px;box-sizing:border-box;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#FF5F57;"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:#FEBC2E;"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:#28C840;"></div>
+      </div>
+      <div style="position:absolute;left:0;right:0;text-align:center;font-size:13.5px;font-weight:600;color:#1d1d1f;pointer-events:none;">환경설정</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 0;">
+      <sc-for list="{{ sections }}" as="section" hint-placeholder-count="3">
+        <div style="margin:0 20px 22px 20px;">
+          <div style="font-size:12px;font-weight:600;color:#86868b;padding:0 6px 6px;">{{ section.header }}</div>
+          <div style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,0.045);">
+            <sc-for list="{{ section.rows }}" as="row" hint-placeholder-count="2">
+              <div style="border-bottom:{{ row.borderStyle }};">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:44px;cursor:{{ row.cursor }};" onClick="{{ row.onRowClick }}" style-hover="background:rgba(0,0,0,0.025);">
+                  <div style="width:28px;height:28px;border-radius:7px;background:{{ row.iconBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <sc-if value="{{ row.isShortcut }}" hint-placeholder-val="{{ false }}"><span style="color:#fff;font-size:15px;font-weight:600;">&#8984;</span></sc-if>
+                    <sc-if value="{{ row.isEngine }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.25" stroke="white" stroke-width="1.4"></circle><path d="M1.75 8h12.5M8 1.75c1.7 1.8 1.7 10.7 0 12.5M8 1.75c-1.7 1.8-1.7 10.7 0 12.5" stroke="white" stroke-width="1.2" fill="none"></path></svg></sc-if>
+                    <sc-if value="{{ row.isLanguage }}" hint-placeholder-val="{{ false }}"><svg width="16" height="14" viewBox="0 0 16 14" fill="none"><rect x="1" y="1" width="14" height="9" rx="2.5" fill="white"></rect><path d="M5 10l-1.8 3 3.6-1.8z" fill="white"></path></svg></sc-if>
+                    <sc-if value="{{ row.isInfo }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.25" stroke="white" stroke-width="1.4"></circle><rect x="7.25" y="7" width="1.5" height="4.25" rx="0.75" fill="white"></rect><circle cx="8" cy="4.75" r="0.9" fill="white"></circle></svg></sc-if>
+                  </div>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
+                    <span style="font-size:13px;font-weight:500;color:#1d1d1f;">{{ row.title }}</span>
+                    <sc-if value="{{ row.hasSubtitle }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;color:#86868b;">{{ row.subtitle }}</span></sc-if>
+                  </div>
+                  <sc-if value="{{ row.isShortcut }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:5px 10px;background:#F0F0F2;border-radius:6px;font-size:12.5px;font-weight:600;color:{{ row.shortcutColor }};min-width:52px;text-align:center;">{{ row.shortcutLabel }}</div>
+                  </sc-if>
+                  <sc-if value="{{ row.isEngine }}" hint-placeholder-val="{{ false }}">
+                    <dc-import name="SegmentedControl" value="{{ engine }}" on-change="{{ setEngine }}" hint-size="170px,32px"></dc-import>
+                  </sc-if>
+                  <sc-if value="{{ row.hasTrailingText }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:12.5px;color:#86868b;">{{ row.trailingText }}</span>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ row.isLanguageExpanded }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:2px 16px 10px 56px;display:flex;flex-direction:column;gap:1px;animation:discoPopIn 0.15s ease-out;">
+                    <sc-for list="{{ row.langOptions }}" as="opt" hint-placeholder-count="4">
+                      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:7px;cursor:pointer;" onClick="{{ opt.onPick }}" style-hover="background:rgba(0,0,0,0.04);">
+                        <span style="font-size:13px;color:#1d1d1f;">{{ opt.name }}</span>
+                        <sc-if value="{{ opt.selected }}" hint-placeholder-val="{{ false }}">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5l2.5 2.5L10 3" stroke="{{ accent }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;blue&quot;, &quot;options&quot;: [&quot;blue&quot;,&quot;purple&quot;,&quot;pink&quot;,&quot;red&quot;,&quot;orange&quot;,&quot;yellow&quot;,&quot;green&quot;,&quot;graphite&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}, &quot;density&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;comfortable&quot;, &quot;options&quot;: [&quot;comfortable&quot;,&quot;compact&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}}">
+class Component extends DCLogic {
+  accentMap = { blue:'#0A84FF', purple:'#AF52DE', pink:'#FF375F', red:'#FF453A', orange:'#FF9F0A', yellow:'#FFD60A', green:'#32D74B', graphite:'#8E8E93' };
+  iconBgByType = { shortcut:'#5E5CE6', engine:'#32ADE6', language:'#34C759', info:'#8E8E93' };
+  languageOptions = ['영어', '스페인어', '일본어', '한국어'];
+
+  rawSections = [
+    { id:'shortcuts', header:'단축키', rows:[
+      { id:'globalShortcut', type:'shortcut', title:'전역 단축키', subtitle:'번역 팝업 열기' },
+    ]},
+    { id:'engine', header:'번역 엔진', rows:[
+      { id:'defaultEngine', type:'engine', title:'기본 번역 엔진', subtitle:'채팅 시작 시 기본으로 사용' },
+    ]},
+    { id:'language', header:'언어', rows:[
+      { id:'nativeLanguage', type:'language', title:'모국어', subtitle:'번역의 기준이 되는 언어', langKey:'native' },
+      { id:'targetLanguage', type:'language', title:'번역 언어', subtitle:'기본으로 번역할 언어', langKey:'target' },
+    ]},
+    { id:'info', header:'정보', rows:[
+      { id:'version', type:'info', title:'버전', trailingText:'1.0.0 (MVP)' },
+      { id:'contact', type:'info', title:'문의', trailingText:'support@disco.app' },
+    ]},
+  ];
+
+  state = {
+    engine: 'general',
+    recording: false,
+    shortcut: '⌘⇧K',
+    nativeLanguage: '한국어',
+    targetLanguage: '영어',
+    languageOpen: { native: false, target: false },
+  };
+
+  componentWillUnmount() {
+    if (this._recordingHandler) document.removeEventListener('keydown', this._recordingHandler, true);
+  }
+
+  accentHex() { return this.accentMap[this.props.accentColor ?? 'blue'] || '#0A84FF'; }
+  setEngine = (v) => this.setState({ engine: v });
+
+  startRecording = () => {
+    if (this.state.recording) return;
+    this.setState({ recording: true });
+    this._recordingHandler = (e) => {
+      e.preventDefault();
+      if (['Control','Shift','Alt','Meta'].includes(e.key)) return;
+      const parts = [];
+      if (e.metaKey) parts.push('⌘');
+      if (e.ctrlKey) parts.push('⌃');
+      if (e.altKey) parts.push('⌥');
+      if (e.shiftKey) parts.push('⇧');
+      parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
+      this.setState({ recording:false, shortcut: parts.join('') });
+      document.removeEventListener('keydown', this._recordingHandler, true);
+    };
+    document.addEventListener('keydown', this._recordingHandler, true);
+  };
+
+  toggleLanguage(key) {
+    this.setState(s => ({ languageOpen: { native: false, target: false, [key]: !s.languageOpen[key] } }));
+  }
+  setLanguage(key, value) {
+    const patch = key === 'native' ? { nativeLanguage: value } : { targetLanguage: value };
+    this.setState(s => ({ ...patch, languageOpen: { ...s.languageOpen, [key]: false } }));
+  }
+
+  renderVals() {
+    const accent = this.accentHex();
+    const density = this.props.density === 'compact' ? 'compact' : 'comfortable';
+    const padY = density === 'compact' ? 7 : 11;
+
+    const sections = this.rawSections.map(sec => ({
+      id: sec.id,
+      header: sec.header,
+      rows: sec.rows.map((row, i) => {
+        const isLast = i === sec.rows.length - 1;
+        const isShortcut = row.type === 'shortcut';
+        const isEngine = row.type === 'engine';
+        const isLanguage = row.type === 'language';
+        const isInfo = row.type === 'info';
+        const isLanguageOpen = isLanguage && this.state.languageOpen[row.langKey];
+        const currentLangVal = isLanguage ? (row.langKey === 'native' ? this.state.nativeLanguage : this.state.targetLanguage) : '';
+        return {
+          id: row.id,
+          title: row.title,
+          subtitle: row.subtitle || '',
+          hasSubtitle: !!row.subtitle,
+          borderStyle: isLast ? 'none' : '1px solid rgba(0,0,0,0.07)',
+          padTop: padY,
+          iconBg: this.iconBgByType[row.type] || '#8E8E93',
+          isShortcut, isEngine, isLanguage, isInfo,
+          cursor: (isLanguage || isShortcut) ? 'pointer' : 'default',
+          onRowClick: isLanguage ? (() => this.toggleLanguage(row.langKey)) : (isShortcut ? (() => this.startRecording()) : (() => {})),
+          shortcutLabel: isShortcut ? (this.state.recording ? '키를 누르세요…' : this.state.shortcut) : '',
+          shortcutColor: isShortcut && this.state.recording ? accent : '#1d1d1f',
+          isLanguageExpanded: isLanguageOpen,
+          langOptions: isLanguage ? this.languageOptions.map(name => ({ name, selected: name === currentLangVal, onPick: () => this.setLanguage(row.langKey, name) })) : [],
+          hasTrailingText: isLanguage ? !isLanguageOpen : !!row.trailingText,
+          trailingText: isLanguage ? currentLangVal : (row.trailingText || ''),
+        };
+      }),
+    }));
+
+    return {
+      accent,
+      sections,
+      engine: this.state.engine,
+      setEngine: this.setEngine,
+    };
+  }
+}
+</script>
+</body>
+</html>

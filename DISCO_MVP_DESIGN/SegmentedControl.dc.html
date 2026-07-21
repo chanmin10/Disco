@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:inline-flex;padding:2px;background:rgba(0,0,0,0.06);border-radius:8px;gap:2px;">
+  <div style="padding:4px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;text-align:center;user-select:none;background:{{ googleBg }};color:{{ googleColor }};box-shadow:{{ googleShadow }};" onClick="{{ selectGoogle }}">General</div>
+  <div style="padding:4px 12px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;text-align:center;user-select:none;background:{{ geminiBg }};color:{{ geminiColor }};box-shadow:{{ geminiShadow }};" onClick="{{ selectGemini }}">Quick</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 170, &quot;height&quot;: 36}, &quot;value&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;general&quot;, &quot;options&quot;: [&quot;general&quot;,&quot;quick&quot;], &quot;tsType&quot;: &quot;string&quot;}, &quot;onChange&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;(v: string) =&gt; void&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const value = this.props.value ?? 'general';
+    const isGoogle = value === 'general';
+    const selectedShadow = '0 1px 3px rgba(0,0,0,0.18)';
+    return {
+      googleBg: isGoogle ? '#ffffff' : 'transparent',
+      googleColor: isGoogle ? '#1d1d1f' : '#6e6e73',
+      googleShadow: isGoogle ? selectedShadow : 'none',
+      geminiBg: !isGoogle ? '#ffffff' : 'transparent',
+      geminiColor: !isGoogle ? '#1d1d1f' : '#6e6e73',
+      geminiShadow: !isGoogle ? selectedShadow : 'none',
+      selectGoogle: () => { if (this.props.onChange) this.props.onChange('general'); },
+      selectGemini: () => { if (this.props.onChange) this.props.onChange('quick'); },
+    };
+  }
+}
+</script>
+</body>
+</html>

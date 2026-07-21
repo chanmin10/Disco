@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  body { margin: 0; }
+  * { box-sizing: border-box; }
+  a { color: #0A84FF; text-decoration: none; }
+  a:hover { color: #0A84FF; opacity: 0.8; }
+  ::placeholder { color: #8a8a92; }
+  @keyframes discoPopIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+</style>
+</helmet>
+<div style="width:100%;min-height:100vh;position:relative;overflow:hidden;background:linear-gradient(160deg,#4a67b0 0%,#6d86cf 45%,#8f78c4 100%);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;">
+  <div style="position:absolute;width:360px;height:360px;border-radius:50%;background:rgba(255,255,255,0.16);top:-100px;right:40px;filter:blur(50px);pointer-events:none;"></div>
+  <div style="position:absolute;width:280px;height:280px;border-radius:50%;background:rgba(255,170,110,0.22);bottom:-70px;left:100px;filter:blur(60px);pointer-events:none;"></div>
+  <div style="position:absolute;top:0;left:0;right:0;height:26px;background:rgba(0,0,0,0.16);"></div>
+  <sc-if value="{{ isOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="width:420px;border-radius:16px;background:rgba(255,255,255,0.5);backdrop-filter:blur(34px) saturate(180%);-webkit-backdrop-filter:blur(34px) saturate(180%);box-shadow:0 25px 70px rgba(0,0,0,0.32),0 0 0 1px rgba(255,255,255,0.5);overflow:visible;position:absolute;top:36px;right:20px;animation:discoPopIn 0.16s ease-out;">
+      <div style="position:absolute;top:14px;right:18px;font-size:10.5px;font-weight:600;color:#9a9aa0;background:rgba(0,0,0,0.045);padding:3px 8px;border-radius:10px;">{{ engineLabel }}</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:20px 56px 16px 20px;">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><circle cx="8" cy="8" r="6.25" stroke="#c7c7cc" stroke-width="1.3"></circle><path d="M1.75 8h12.5M8 1.75c1.7 1.8 1.7 10.7 0 12.5M8 1.75c-1.7 1.8-1.7 10.7 0 12.5" stroke="#c7c7cc" stroke-width="1.1" fill="none"></path></svg>
+        <input ref="{{ inputRef }}" type="text" value="{{ text }}" onChange="{{ handleChange }}" placeholder="번역할 텍스트 입력" style="flex:1;border:none;outline:none;background:transparent;font-size:18px;font-family:inherit;color:#1d1d1f;min-width:0;"/>
+      </div>
+      <div style="height:1px;background:rgba(0,0,0,0.08);margin:0 20px;"></div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:14px 20px 18px;min-height:34px;">
+        <div style="flex:1;min-width:0;">
+          <sc-if value="{{ hasResult }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:15px;color:#1d1d1f;font-weight:500;">{{ resultText }}</span>
+              <sc-if value="{{ saved }}" hint-placeholder-val="{{ false }}">
+                <span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#34C759;font-weight:600;white-space:nowrap;">
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6.5l2.5 2.5L10 3" stroke="#34C759" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  저장됨
+                </span>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasNoResult }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size:13px;color:#b0b0b6;">번역 결과가 여기에 표시됩니다</span>
+          </sc-if>
+        </div>
+        <div style="position:relative;flex-shrink:0;">
+          <sc-if value="{{ dropdownOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:fixed;inset:0;z-index:10;" onClick="{{ closeDropdown }}"></div>
+            <div style="position:absolute;right:0;bottom:100%;margin-bottom:8px;background:#ffffff;border-radius:10px;box-shadow:0 10px 26px rgba(0,0,0,0.2),0 0 0 1px rgba(0,0,0,0.06);overflow:hidden;z-index:11;width:140px;animation:discoPopIn 0.15s ease-out;">
+              <sc-for list="{{ roomOptions }}" as="opt" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;background:{{ opt.bg }};" onClick="{{ opt.onPick }}" style-hover="background:rgba(0,0,0,0.045);">
+                  <span style="font-size:12.5px;color:#1d1d1f;">{{ opt.name }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.045);cursor:pointer;" onClick="{{ toggleDropdown }}">
+            <span style="font-size:12px;font-weight:600;color:#1d1d1f;white-space:nowrap;">{{ targetRoomName }}</span>
+            <svg width="9" height="6" viewBox="0 0 10 6" fill="none" style="flex-shrink:0;"><path d="M1 1l4 4 4-4" stroke="#86868b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isClosed }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:36px;right:20px;width:420px;padding:20px;border-radius:16px;background:rgba(255,255,255,0.35);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;animation:discoPopIn 0.16s ease-out;" onClick="{{ reopen }}">
+      <span style="font-size:13px;color:#9a9aa0;">Esc 로 팝업이 닫혔습니다</span>
+      <span style="font-size:12.5px;font-weight:600;color:{{ accent }};">클릭하여 다시 열기</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;blue&quot;, &quot;options&quot;: [&quot;blue&quot;,&quot;purple&quot;,&quot;pink&quot;,&quot;red&quot;,&quot;orange&quot;,&quot;yellow&quot;,&quot;green&quot;,&quot;graphite&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}, &quot;engine&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;general&quot;, &quot;options&quot;: [&quot;general&quot;,&quot;quick&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}}">
+class Component extends DCLogic {
+  accentMap = { blue:'#0A84FF', purple:'#AF52DE', pink:'#FF375F', red:'#FF453A', orange:'#FF9F0A', yellow:'#FFD60A', green:'#32D74B', graphite:'#8E8E93' };
+  rooms = [
+    { id:'programming', name:'프로그래밍' },
+    { id:'daily', name:'일상' },
+    { id:'business', name:'비즈니스' },
+  ];
+  phrasebooks = {
+    programming: [
+      { src:'버그', tgt:'bug' },
+      { src:'배포', tgt:'deploy' },
+      { src:'함수', tgt:'function' },
+      { src:'변수', tgt:'variable' },
+    ],
+    daily: [
+      { src:'배고프다', tgt:'hungry' },
+      { src:'피곤하다', tgt:'exhausted' },
+      { src:'이따 봐', tgt:'see you later' },
+      { src:'날씨', tgt:'weather' },
+    ],
+    business: [
+      { src:'마감일', tgt:'deadline' },
+      { src:'예산', tgt:'budget' },
+      { src:'회의', tgt:'meeting' },
+      { src:'연락하다', tgt:'touch base' },
+    ],
+  };
+
+  inputRef = React.createRef();
+  state = { text:'', result:null, saved:false, targetRoomId:'programming', dropdownOpen:false, closed:false };
+
+  componentDidMount() {
+    setTimeout(() => { if (this.inputRef.current) this.inputRef.current.focus(); }, 60);
+    this._onKeyDown = (e) => {
+      if (e.key === 'Escape' && !this.state.closed) {
+        this.setState({ closed:true, dropdownOpen:false });
+      }
+    };
+    document.addEventListener('keydown', this._onKeyDown);
+  }
+  componentWillUnmount() {
+    document.removeEventListener('keydown', this._onKeyDown);
+    clearTimeout(this._debounce);
+    clearTimeout(this._saveTimer);
+  }
+
+  hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+
+  computeResult(roomId, text) {
+    const dict = this.phrasebooks[roomId] || this.phrasebooks.programming;
+    const trimmed = text.trim();
+    const hit = dict.find(p => trimmed.includes(p.src) || p.src.includes(trimmed));
+    const picked = hit || dict[this.hashStr(trimmed) % dict.length];
+    return { tgt: picked.tgt, src: hit ? hit.src : trimmed };
+  }
+
+  handleChange = (e) => {
+    const text = e.target.value;
+    this.setState({ text, saved:false });
+    clearTimeout(this._debounce);
+    if (!text.trim()) { this.setState({ result:null }); return; }
+    this._debounce = setTimeout(() => {
+      const result = this.computeResult(this.state.targetRoomId, this.state.text);
+      this.setState({ result });
+      clearTimeout(this._saveTimer);
+      this._saveTimer = setTimeout(() => this.setState({ saved:true }), 450);
+    }, 350);
+  };
+
+  toggleDropdown = () => this.setState(s => ({ dropdownOpen: !s.dropdownOpen }));
+  closeDropdown = () => this.setState({ dropdownOpen:false });
+  pickRoom(id) {
+    this.setState({ targetRoomId:id, dropdownOpen:false });
+    if (this.state.text.trim()) {
+      const result = this.computeResult(id, this.state.text);
+      this.setState({ result, saved:false });
+      clearTimeout(this._saveTimer);
+      this._saveTimer = setTimeout(() => this.setState({ saved:true }), 450);
+    }
+  }
+  reopen = () => {
+    this.setState({ closed:false });
+    setTimeout(() => { if (this.inputRef.current) this.inputRef.current.focus(); }, 60);
+  };
+
+  renderVals() {
+    const accent = this.accentMap[this.props.accentColor ?? 'blue'] || '#0A84FF';
+    const room = this.rooms.find(r => r.id === this.state.targetRoomId) || this.rooms[0];
+    return {
+      accent,
+      isOpen: !this.state.closed,
+      isClosed: this.state.closed,
+      inputRef: this.inputRef,
+      text: this.state.text,
+      handleChange: this.handleChange,
+      hasResult: !!this.state.result,
+      hasNoResult: !this.state.result,
+      resultText: this.state.result ? this.state.result.tgt : '',
+      saved: this.state.saved,
+      engineLabel: (this.props.engine === 'quick') ? 'Quick' : 'General',
+      targetRoomName: room.name,
+      dropdownOpen: this.state.dropdownOpen,
+      toggleDropdown: this.toggleDropdown,
+      closeDropdown: this.closeDropdown,
+      roomOptions: this.rooms.map(r => ({ id:r.id, name:r.name, bg: r.id === this.state.targetRoomId ? 'rgba(0,0,0,0.045)' : 'transparent', onPick: () => this.pickRoom(r.id) })),
+      reopen: this.reopen,
+    };
+  }
+}
+</script>
+</body>
+</html>
