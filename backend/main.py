@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy import select
 from database import get_db
 from models import Theme, VocabEntry
-from schemas import TranslateRequest, TranslateResponse, ClassifyRequest, ClassifyResponse, LLMRequest, LLMResponse
+from schemas import ThemeRequest, ThemeResponse, TranslateRequest, TranslateResponse, ClassifyRequest, ClassifyResponse, LLMRequest, LLMResponse
 from prompts import VOCAB_CLASSIFIER_PROMPT, GEMINI_TRANSLATE_PROMPT
 import httpx
 import os
@@ -156,3 +157,22 @@ async def translate_llm(request: LLMRequest, db: AsyncSession = Depends(get_db))
             await db.refresh(entry)
 
         return LLMResponse(text = parsed_text)
+
+@app.post("/themes", response_model=ThemeResponse)
+async def create_theme(request: ThemeRequest, db: AsyncSession = Depends(get_db)):
+    theme = Theme(
+        name = request.name,
+        target_language = request.target_language
+    )
+    db.add(theme)
+    await db.commit()
+    await db.refresh(theme)
+
+    return theme
+
+@app.get("/themes", response_model=list[ThemeResponse])
+async def get_themes(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Theme))
+    themes = result.scalars().all()
+
+    return themes

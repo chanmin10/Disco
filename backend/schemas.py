@@ -24,3 +24,15 @@ class LLMRequest(BaseModel):
 
 class LLMResponse(BaseModel):
     text: str
+
+class ThemeRequest(BaseModel):
+    name: str
+    target_language: str
+
+class ThemeResponse(BaseModel):
+    id: UUID
+    name: str 
+    target_language: str
+
+    class config:
+        from_attributes = True
