@@ -44,5 +44,24 @@ class ApiService{
         );
         return LLMResponse.fromJson(response.data);
     }
-}
+    
+    Future<List<Theme>> getThemes() async{
+        final response = await _dio.get('/themes');
 
+        return (response.data as List)
+            .map((item) => Theme.fromJson(item))
+            .toList();
+    }
+
+    Future<Theme> createTheme(String name, String targetLanguage) async{
+        final response = await _dio.post(
+            '/themes',
+            data: {
+                'name': name,
+                'target_language': targetLanguage,
+            }
+        );
+        
+        return Theme.fromJson(response.data);
+    }
+}
