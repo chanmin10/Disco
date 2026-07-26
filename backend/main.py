@@ -4,11 +4,12 @@ from sqlalchemy import text
 from sqlalchemy import select
 from database import get_db
 from models import Theme, VocabEntry
-from schemas import ThemeRequest, ThemeResponse, TranslateRequest, TranslateResponse, ClassifyRequest, ClassifyResponse, LLMRequest, LLMResponse
+from schemas import ThemeRequest, ThemeResponse, TranslateRequest, TranslateResponse, ClassifyRequest, ClassifyResponse, LLMRequest, LLMResponse, VocabResponse
 from prompts import VOCAB_CLASSIFIER_PROMPT, GEMINI_TRANSLATE_PROMPT
 import httpx
 import os
 import json
+from uuid import UUID
 
 app = FastAPI()
 
@@ -176,3 +177,12 @@ async def get_themes(db: AsyncSession = Depends(get_db)):
     themes = result.scalars().all()
 
     return themes
+
+@app.get("/vocab", response_model=list[VocabResponse])
+async def get_vocab(theme_id: UUID, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(VocabEntry).where(VocabEntry.theme_id == theme_id)
+    )
+    vocab = result.scalars().all()
+    
+    return vocab
