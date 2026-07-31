@@ -102,20 +102,31 @@ async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db))
         parsed = json.loads(response_text)
 
         if parsed["is_vocab"]:
-            entry = VocabEntry(
-                theme_id = request.theme_id,
-                word_native = request.text_native,
-                word_target = request.text_target,
-                source_engine = "translation",
+            existing = await db.execute(
+                select(VocabEntry).where(
+                    VocabEntry.theme_id == request.theme_id,
+                    VocabEntry.word_target == request.text_target
+                )
             )
-            db.add(entry)
-            await db.commit()
-            await db.refresh(entry)
+            existing_entry = existing.scalar_one_or_none()
+
+            if existing_entry:
+                pass
+            else:
+                entry = VocabEntry(
+                    theme_id = request.theme_id,
+                    word_native = request.text_native,
+                    word_target = request.text_target,
+                    source_engine = "translation",
+                )
+                db.add(entry)
+                await db.commit()
+                await db.refresh(entry)
         
         return ClassifyResponse(is_vocab = parsed["is_vocab"])
 
-@app.post("/translate/llm", response_model=LLMResponse)
-async def translate_llm(request: LLMRequest, db: AsyncSession = Depends(get_db)):
+@app.post("/translate/ai", response_model=LLMResponse)
+async def translate_ai(request: LLMRequest, db: AsyncSession = Depends(get_db)):
     theme = await db.get(Theme, request.theme_id)
 
     if theme is None:
@@ -146,16 +157,30 @@ async def translate_llm(request: LLMRequest, db: AsyncSession = Depends(get_db))
         converted_json = json.loads(parsed_json)
 
         if(converted_json["is_vocab"]):
-            entry = VocabEntry(
-                theme_id = request.theme_id,
-                word_native = converted_json["word_native"],
-                word_target = converted_json["word_target"],
-                example_sentence = converted_json["example_sentence"],
-                source_engine = "gemini"
+            existing = await db.execute(
+                select(VocabEntry).where(
+                    VocabEntry.theme_id == request.theme_id,
+                    VocabEntry.word_target == converted_json["word_target"]
+                )
             )
-            db.add(entry)
-            await db.commit()
-            await db.refresh(entry)
+            existing_entry = existing.scalar_one_or_none()
+
+            if existing_entry:
+                existing_entry.word_target = converted_json["word_target"]
+                existing_entry.word_native = converted_json["word_native"]
+                existing_entry.source_engine = "gemini"
+                await db.commit()
+            else:
+                entry = VocabEntry(
+                    theme_id = request.theme_id,
+                    word_native = converted_json["word_native"],
+                    word_target = converted_json["word_target"],
+                    example_sentence = converted_json["example_sentence"],
+                    source_engine = "gemini"
+                )
+                db.add(entry)
+                await db.commit()
+                await db.refresh(entry)
 
         return LLMResponse(text = parsed_text)
 
