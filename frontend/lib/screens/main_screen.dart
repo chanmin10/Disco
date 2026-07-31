@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/chat_message.dart';
-import '../models/vocab_item.dart';
 import '../providers/translation_provider.dart';
 import '../widgets/chat_sidebar.dart';
 import '../widgets/vocab_sidebar.dart';
@@ -30,6 +29,14 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     _inputFocusNode.addListener(() {
       setState(() => _inputFocused = _inputFocusNode.hasFocus);
     });
+    // Auto-select the first theme once the initial GET /themes resolves.
+    Future.microtask(() async {
+      final themes = await ref.read(themesProvider.future);
+      if (!mounted) return;
+      if (themes.isNotEmpty && ref.read(selectedThemeProvider) == null) {
+        ref.read(selectedThemeProvider.notifier).state = themes.first.id;
+      }
+    });
   }
 
   @override
@@ -50,15 +57,16 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   Future<void> _sendMessage() async {
     final text = _inputController.text.trim();
-    if (text.isEmpty || ref.read(isLoadingProvider)) return;
+    final themeId = ref.read(selectedThemeProvider);
+    if (text.isEmpty || themeId == null || ref.read(isLoadingProvider)) return;
 
-    final roomId = ref.read(selectedThemeProvider);
     final engine = ref.read(engineProvider);
-    final notifier = ref.read(roomsProvider.notifier);
+    final chatNotifier = ref.read(chatProvider.notifier);
+    final vocabNotifier = ref.read(vocabListProvider.notifier);
     final api = ref.read(apiServiceProvider);
 
-    notifier.addMessage(
-      roomId,
+    chatNotifier.addMessage(
+      themeId,
       ChatMessage(id: 'u${DateTime.now().microsecondsSinceEpoch}', role: 'user', text: text),
     );
     _inputController.clear();
@@ -67,35 +75,33 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     _scrollToBottom();
 
     try {
-      String translated;
       if (engine == 'quick') {
-        final res = await api.translateQuick(roomId, text);
+        // Quick mode: Google Translate, then classify separately — /translate/quick
+        // never persists a word itself, so classify is what may save it.
+        final res = await api.translateQuick(themeId, text);
         ref.read(translationProvider.notifier).state = res;
-        translated = res.wordTarget;
-      } else {
-        final res = await api.translateLLM(roomId, text);
-        translated = res.text;
-      }
-
-      notifier.addMessage(
-        roomId,
-        ChatMessage(id: 'b${DateTime.now().microsecondsSinceEpoch}', role: 'bot', text: translated),
-      );
-
-      final classified = await api.classify(roomId, text, translated);
-      if (classified.isVocab) {
-        final vocabId = 'v${DateTime.now().microsecondsSinceEpoch}';
-        notifier.addVocab(
-          roomId,
-          VocabItem(id: vocabId, word: translated, sub: text, isNew: true),
+        chatNotifier.addMessage(
+          themeId,
+          ChatMessage(id: 'b${DateTime.now().microsecondsSinceEpoch}', role: 'bot', text: res.response),
         );
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          notifier.clearVocabNew(roomId, vocabId);
-        });
+
+        final classified = await api.classify(themeId, res.textNative, res.textTarget);
+        if (classified.isVocab) {
+          await vocabNotifier.refresh(themeId);
+        }
+      } else {
+        // AI mode: /translate/ai already saves the word internally, so classify
+        // must NOT be called here — that would double-save.
+        final res = await api.translateAi(themeId, text);
+        chatNotifier.addMessage(
+          themeId,
+          ChatMessage(id: 'b${DateTime.now().microsecondsSinceEpoch}', role: 'bot', text: res.text),
+        );
+        await vocabNotifier.refresh(themeId);
       }
     } catch (_) {
-      notifier.addMessage(
-        roomId,
+      chatNotifier.addMessage(
+        themeId,
         ChatMessage(
           id: 'e${DateTime.now().microsecondsSinceEpoch}',
           role: 'bot',
@@ -111,17 +117,22 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen(chatProvider, (prev, next) => _scrollToBottom());
-    ref.listen(selectedThemeProvider, (prev, next) => _scrollToBottom());
+    ref.listen(selectedThemeProvider, (prev, next) {
+      _scrollToBottom();
+      if (next != null) {
+        ref.read(vocabListProvider.notifier).refresh(next);
+      }
+    });
 
-    final pickerOpen = ref.watch(newRoomPickerOpenProvider);
+    final pickerOpen = ref.watch(newThemePickerOpenProvider);
 
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent &&
             event.logicalKey == LogicalKeyboardKey.escape &&
-            ref.read(newRoomPickerOpenProvider)) {
-          ref.read(newRoomPickerOpenProvider.notifier).state = false;
+            ref.read(newThemePickerOpenProvider)) {
+          ref.read(newThemePickerOpenProvider.notifier).state = false;
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -165,15 +176,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               Positioned.fill(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => ref.read(newRoomPickerOpenProvider.notifier).state = false,
+                  onTap: () => ref.read(newThemePickerOpenProvider.notifier).state = false,
                   child: const SizedBox.expand(),
                 ),
               ),
               const Positioned(
                 left: 8,
-                width: 144,
+                width: 220,
                 bottom: 44,
-                child: NewRoomPopover(),
+                child: NewThemePopover(),
               ),
             ],
           ],
@@ -226,7 +237,7 @@ class _TitleBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeRoom = ref.watch(activeRoomProvider);
+    final activeTheme = ref.watch(activeThemeProvider);
     final engine = ref.watch(engineProvider);
     final rightSidebarOpen = ref.watch(isRightSidebarOpen);
 
@@ -263,7 +274,7 @@ class _TitleBar extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Flexible(
                     child: Text(
-                      activeRoom.name,
+                      activeTheme?.name ?? '테마를 선택하세요',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -392,10 +403,11 @@ class _ChatArea extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final messages = ref.watch(chatProvider);
+    final themeId = ref.watch(selectedThemeProvider);
+    final messages = ref.watch(chatProvider)[themeId] ?? const [];
     final isLoading = ref.watch(isLoadingProvider);
     final input = ref.watch(inputProvider);
-    final canSend = input.trim().isNotEmpty && !isLoading;
+    final canSend = input.trim().isNotEmpty && !isLoading && themeId != null;
 
     return Container(
       color: Colors.white,

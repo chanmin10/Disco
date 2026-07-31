@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/vocab_entry.dart';
 import '../providers/translation_provider.dart';
 
 class VocabSidebar extends ConsumerWidget {
@@ -8,7 +9,8 @@ class VocabSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vocab = ref.watch(vocabListProvider);
+    final themeId = ref.watch(selectedThemeProvider);
+    final vocab = ref.watch(vocabListProvider)[themeId] ?? const [];
 
     return Container(
       color: const Color(0xFFFAFAFA),
@@ -18,7 +20,7 @@ class VocabSidebar extends ConsumerWidget {
 }
 
 class _VocabList extends StatelessWidget {
-  final List vocab;
+  final List<VocabEntry> vocab;
   const _VocabList({required this.vocab});
 
   @override
@@ -26,10 +28,10 @@ class _VocabList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [
-        for (final item in vocab)
+        for (final entry in vocab)
           Padding(
             padding: const EdgeInsets.only(bottom: 5),
-            child: _VocabFlipCard(item: item),
+            child: _VocabFlipCard(entry: entry),
           ),
       ],
     );
@@ -37,8 +39,8 @@ class _VocabList extends StatelessWidget {
 }
 
 class _VocabFlipCard extends StatefulWidget {
-  final dynamic item;
-  const _VocabFlipCard({required this.item});
+  final VocabEntry entry;
+  const _VocabFlipCard({required this.entry});
 
   @override
   State<_VocabFlipCard> createState() => _VocabFlipCardState();
@@ -67,7 +69,7 @@ class _VocabFlipCardState extends State<_VocabFlipCard> with SingleTickerProvide
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.item;
+    final entry = widget.entry;
     return GestureDetector(
       onTap: _flip,
       child: AnimatedBuilder(
@@ -85,15 +87,15 @@ class _VocabFlipCardState extends State<_VocabFlipCard> with SingleTickerProvide
                     alignment: Alignment.center,
                     transform: Matrix4.identity()..rotateY(pi),
                     child: _Face(
-                      text: item.sub,
+                      text: entry.wordNative,
                       background: const Color(0xFF0A84FF),
                       textColor: Colors.white,
                       fontSize: 12,
                     ),
                   )
                 : _Face(
-                    text: item.word,
-                    background: item.isNew ? const Color(0x1C0A84FF) : Colors.white,
+                    text: entry.wordTarget,
+                    background: Colors.white,
                     textColor: const Color(0xFF1D1D1F),
                     fontSize: 12.5,
                   ),

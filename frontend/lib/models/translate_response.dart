@@ -1,16 +1,19 @@
 class TranslateResponse{
-    final String wordNative;
-    final String wordTarget;
+    final String response;
+    final String textNative;
+    final String textTarget;
 
     TranslateResponse({
-        required this.wordNative,
-        required this.wordTarget,
+        required this.response,
+        required this.textNative,
+        required this.textTarget,
     });
-    
+
     factory TranslateResponse.fromJson(Map<String, dynamic> json){
         return TranslateResponse(
-            wordNative: json['word_native'],
-            wordTarget: json['word_target'],
+            response: json['response'],
+            textNative: json['text_native'],
+            textTarget: json['text_target'],
         );
     }
 }
