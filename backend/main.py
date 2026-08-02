@@ -211,3 +211,24 @@ async def get_vocab(theme_id: UUID, db: AsyncSession = Depends(get_db)):
     vocab = result.scalars().all()
     
     return vocab
+
+@app.delete("/vocab/{entry_id}")
+async def delete_vocab(entry_id: UUID, db: AsyncSession = Depends(get_db)):
+    entry = await db.get(VocabEntry, entry_id)
+    
+    if entry is None:
+        return {"message": "Entry not found"}
+
+    await db.delete(entry)
+    await db.commit()
+    return {"message": "Entry deleted successfully"}
+
+@app.delete("/themes/{theme_id}")
+async def delete_theme(theme_id: UUID, db: AsyncSession = Depends(get_db)):
+    theme = await db.get(Theme, theme_id)
+    if theme is None:
+        return {"message": "Theme not found"}
+
+    await db.delete(theme)
+    await db.commit()
+    return {"message": "Theme deleted successfully"}

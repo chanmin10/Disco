@@ -39,6 +39,7 @@ class ThemeResponse(BaseModel):
         from_attributes = True
 
 class VocabResponse(BaseModel):
+    id: UUID
     theme_id: UUID
     word_native: str
     word_target: str
