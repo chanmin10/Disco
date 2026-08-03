@@ -21,6 +21,11 @@ final themesProvider = FutureProvider<List<Theme>>((ref) async{
     return await apiService.getThemes();
 });
 
+/// Theme ids removed optimistically ahead of [themesProvider] refetching,
+/// so a deleted theme disappears immediately instead of waiting on the
+/// network round trip.
+final hiddenThemeIdsProvider = StateProvider<Set<String>>((ref) => {});
+
 /// The currently selected theme, resolved from [themesProvider] + [selectedThemeProvider].
 final activeThemeProvider = Provider<Theme?>((ref) {
     final themes = ref.watch(themesProvider).valueOrNull ?? const [];
@@ -53,6 +58,13 @@ class VocabListNotifier extends StateNotifier<Map<String, List<VocabEntry>>> {
         final api = _ref.read(apiServiceProvider);
         final entries = await api.getVocab(themeId);
         state = {...state, themeId: entries};
+    }
+
+    /// Optimistically drops an entry from local state so a swipe-to-delete
+    /// can animate away immediately, ahead of the DELETE request resolving.
+    void removeLocally(String themeId, String entryId) {
+        final current = state[themeId] ?? const [];
+        state = {...state, themeId: current.where((e) => e.id != entryId).toList()};
     }
 }
 

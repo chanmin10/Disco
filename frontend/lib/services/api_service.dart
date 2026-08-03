@@ -79,4 +79,12 @@ class ApiService{
             .map((item) => VocabEntry.fromJson(item))
             .toList();
     }
+
+    Future<void> deleteVocab(String entryId) async{
+        await _dio.delete('/vocab/$entryId');
+    }
+
+    Future<void> deleteTheme(String themeId) async{
+        await _dio.delete('/themes/$themeId');
+    }
 }

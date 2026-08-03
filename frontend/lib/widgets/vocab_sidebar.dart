@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/vocab_entry.dart';
 import '../providers/translation_provider.dart';
+import 'swipe_to_delete.dart';
 
 class VocabSidebar extends ConsumerWidget {
   const VocabSidebar({super.key});
@@ -19,19 +20,29 @@ class VocabSidebar extends ConsumerWidget {
   }
 }
 
-class _VocabList extends StatelessWidget {
+class _VocabList extends ConsumerWidget {
   final List<VocabEntry> vocab;
   const _VocabList({required this.vocab});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.all(8),
       children: [
         for (final entry in vocab)
           Padding(
             padding: const EdgeInsets.only(bottom: 5),
-            child: _VocabFlipCard(entry: entry),
+            child: SwipeToDelete(
+              key: ValueKey(entry.id),
+              borderRadius: BorderRadius.circular(8),
+              onDelete: () {
+                ref.read(vocabListProvider.notifier).removeLocally(entry.themeId, entry.id);
+                ref.read(apiServiceProvider).deleteVocab(entry.id).then((_) {
+                  ref.read(vocabListProvider.notifier).refresh(entry.themeId);
+                });
+              },
+              child: _VocabFlipCard(entry: entry),
+            ),
           ),
       ],
     );

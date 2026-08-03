@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/theme.dart' as theme_model;
 import '../providers/translation_provider.dart';
+import 'swipe_to_delete.dart';
 
 const _kBorderColor = Color(0x14000000); // rgba(0,0,0,0.08)
 
@@ -12,6 +13,7 @@ class ChatSidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themesAsync = ref.watch(themesProvider);
     final selectedId = ref.watch(selectedThemeProvider);
+    final hiddenIds = ref.watch(hiddenThemeIdsProvider);
 
     return Container(
       color: const Color(0xFFF5F5F7),
@@ -23,17 +25,36 @@ class ChatSidebar extends ConsumerWidget {
                 padding: const EdgeInsets.all(8),
                 children: [
                   for (final theme in themes)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: _ThemeRow(
-                        theme: theme,
-                        isActive: theme.id == selectedId,
-                        onTap: () {
-                          ref.read(selectedThemeProvider.notifier).state = theme.id;
-                          ref.read(newThemePickerOpenProvider.notifier).state = false;
-                        },
+                    if (!hiddenIds.contains(theme.id))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: SwipeToDelete(
+                          key: ValueKey(theme.id),
+                          borderRadius: BorderRadius.circular(7),
+                          onDelete: () {
+                            ref.read(hiddenThemeIdsProvider.notifier).update(
+                                  (ids) => {...ids, theme.id},
+                                );
+                            if (selectedId == theme.id) {
+                              ref.read(selectedThemeProvider.notifier).state = null;
+                            }
+                            ref.read(apiServiceProvider).deleteTheme(theme.id).then((_) {
+                              ref.invalidate(themesProvider);
+                              ref.read(hiddenThemeIdsProvider.notifier).update(
+                                    (ids) => {...ids}..remove(theme.id),
+                                  );
+                            });
+                          },
+                          child: _ThemeRow(
+                            theme: theme,
+                            isActive: theme.id == selectedId,
+                            onTap: () {
+                              ref.read(selectedThemeProvider.notifier).state = theme.id;
+                              ref.read(newThemePickerOpenProvider.notifier).state = false;
+                            },
+                          ),
+                        ),
                       ),
-                    ),
                 ],
               ),
               loading: () => const Center(
