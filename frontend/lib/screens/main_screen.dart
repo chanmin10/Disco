@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/chat_message.dart';
 import '../providers/translation_provider.dart';
+import '../widgets/bold_markdown_text.dart';
 import '../widgets/chat_sidebar.dart';
 import '../widgets/vocab_sidebar.dart';
 import '../widgets/segmented_control.dart';
@@ -514,7 +515,7 @@ class _MessageBubble extends StatelessWidget {
                 bottomRight: Radius.circular(isUser ? 4 : 15),
               ),
             ),
-            child: Text(
+            child: BoldMarkdownText(
               message.text,
               style: TextStyle(
                 fontSize: 14,
