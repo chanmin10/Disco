@@ -18,12 +18,18 @@ void main() async {
     minimumSize: Size(800, 600),
     center: true,
     title: 'DISCO',
+    // Hides the native title bar background/divider while keeping the
+    // traffic-light buttons floating at the top-left, so _TitleBar in
+    // main_screen.dart can draw one merged row instead of a separate
+    // native bar sitting above a second, Flutter-drawn one.
+    titleBarStyle: TitleBarStyle.hidden,
   );
 
   await windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
   });
+  await loadNativeTitleBarHeight();
 
   await hotKeyManager.register(
     HotKey(

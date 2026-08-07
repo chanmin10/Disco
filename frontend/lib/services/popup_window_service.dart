@@ -11,8 +11,21 @@ import '../providers/popup_provider.dart';
 /// provider state as the rest of the app.
 final ProviderContainer container = ProviderContainer();
 
-const Size kMainWindowSize = Size(1180, 760);
+const Size kMainWindowSize = Size(874, 600);
 const Size kPopupBaseSize = Size(420, 150);
+
+/// The OS's actual native title-bar height, queried once at startup (see
+/// [loadNativeTitleBarHeight] in main()). macOS keeps the traffic-light
+/// buttons vertically centered within this exact zone regardless of how
+/// tall our own custom title bar row is — rather than fighting that via
+/// fragile AppKit view repositioning, _TitleBar (main_screen.dart) aligns
+/// its own toggle button to match this known value instead. 28 is the
+/// modern macOS default, used only until the real value loads.
+double nativeTitleBarHeight = 28;
+
+Future<void> loadNativeTitleBarHeight() async {
+  nativeTitleBarHeight = (await windowManager.getTitleBarHeight()).toDouble();
+}
 
 /// Drives the single native window between its two shapes: the full chat UI
 /// and the compact always-on-top popup. There's no multi-window plugin here,
@@ -85,7 +98,10 @@ class PopupWindowService {
     await windowManager.setAlwaysOnTop(false);
     await windowManager.setSkipTaskbar(false);
     await windowManager.setResizable(true);
-    await windowManager.setTitleBarStyle(TitleBarStyle.normal);
+    // The main window's permanent style is hidden (merged custom title bar
+    // — see main.dart's WindowOptions and _TitleBar), not normal, so that's
+    // what closing the popup needs to restore.
+    await windowManager.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: true);
     await windowManager.setBackgroundColor(Colors.white);
     if (_savedMainBounds != null) {
       await windowManager.setBounds(_savedMainBounds!);

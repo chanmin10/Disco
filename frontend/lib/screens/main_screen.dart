@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:window_manager/window_manager.dart';
 import '../models/chat_message.dart';
 import '../providers/translation_provider.dart';
 import '../widgets/bold_markdown_text.dart';
@@ -10,6 +11,12 @@ import '../widgets/segmented_control.dart';
 
 const _kBorderColor = Color(0x14000000); // rgba(0,0,0,0.08)
 const _kAccent = Color(0xFF0A84FF);
+const _kLeftZoneOpenWidth = 160.0; // matches _AnimatedSidebar's left width
+// Reserves space for macOS's native traffic-light buttons, which float over
+// the window's top-left corner once titleBarStyle is hidden (main.dart) —
+// they're real NSButtons the OS draws itself, not something Flutter renders.
+const _kTrafficLightGutter = 78.0;
+const _kTitleBarHeight = 52.0;
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -77,14 +84,18 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
     try {
       if (engine == 'quick') {
-        // Quick mode: Google Translate, then classify separately — /translate/quick
-        // never persists a word itself, so classify is what may save it.
+        // Quick mode: Google Translate is the actual reply the user is
+        // waiting on — show it and stop the loading indicator as soon as it
+        // arrives. Classify runs afterward, in the background; it only
+        // decides whether the word gets saved and shouldn't hold up the
+        // reply (it used to, since loading only cleared in `finally`).
         final res = await api.translateQuick(themeId, text);
         ref.read(translationProvider.notifier).state = res;
         chatNotifier.addMessage(
           themeId,
           ChatMessage(id: 'b${DateTime.now().microsecondsSinceEpoch}', role: 'bot', text: res.response),
         );
+        if (mounted) ref.read(isLoadingProvider.notifier).state = false;
 
         final classified = await api.classify(themeId, res.textNative, res.textTarget);
         if (classified.isVocab) {
@@ -98,6 +109,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           themeId,
           ChatMessage(id: 'b${DateTime.now().microsecondsSinceEpoch}', role: 'bot', text: res.text),
         );
+        if (mounted) ref.read(isLoadingProvider.notifier).state = false;
         await vocabNotifier.refresh(themeId);
       }
     } catch (_) {
@@ -109,9 +121,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           text: '번역 중 오류가 발생했어요. 다시 시도해주세요.',
         ),
       );
-    } finally {
       if (mounted) ref.read(isLoadingProvider.notifier).state = false;
-      _scrollToBottom();
     }
   }
 
@@ -240,68 +250,88 @@ class _TitleBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTheme = ref.watch(activeThemeProvider);
     final engine = ref.watch(engineProvider);
+    final leftSidebarOpen = ref.watch(isLeftSidebarOpen);
     final rightSidebarOpen = ref.watch(isRightSidebarOpen);
 
     return Container(
-      height: 52,
+      height: _kTitleBarHeight,
       decoration: const BoxDecoration(
         color: Color(0xFFF7F7F8),
         border: Border(bottom: BorderSide(color: _kBorderColor)),
       ),
       child: Row(
         children: [
-          // Reserved to align with the left sidebar's width below; the real
-          // traffic lights are drawn by the native macOS titlebar above this.
-          const SizedBox(
-            width: 160,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(right: BorderSide(color: _kBorderColor)),
+          // Traffic-light gutter only — purely a background plate, no
+          // button in it. Fixed at the sidebar's own 160px width (with a
+          // divider) once it's open, so the divider lines up with the
+          // sidebar below. When closed it only needs to clear the traffic
+          // lights themselves (no more +44 for a button, now that the
+          // toggle lives next to the theme title instead — see below) so
+          // the toggle+title can sit closer to the window edge.
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: leftSidebarOpen ? _kLeftZoneOpenWidth : _kTrafficLightGutter,
+            height: _kTitleBarHeight,
+            decoration: BoxDecoration(
+              border: Border(
+                right: leftSidebarOpen ? const BorderSide(color: _kBorderColor) : BorderSide.none,
               ),
             ),
           ),
+          const SizedBox(width: 8),
+          // Kept as a Row sibling rather than nested inside the
+          // DragToMoveArea below — the drag area's pan recognizer and this
+          // button's own tap would otherwise be competing gesture
+          // recognizers on the same subtree.
+          _SidebarToggleButton(
+            isLeft: true,
+            onTap: () {
+              final notifier = ref.read(isLeftSidebarOpen.notifier);
+              notifier.state = !notifier.state;
+            },
+          ),
+          const SizedBox(width: 8),
+          // The empty space here doubles as the window's drag handle, since
+          // titleBarStyle is hidden and there's no native bar to drag by
+          // anymore. Only this filler area is wrapped — the buttons and
+          // SegmentedControl are siblings outside it so their own taps still
+          // work instead of competing with the drag gesture.
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _SidebarToggleButton(
-                    isLeft: true,
-                    onTap: () {
-                      final notifier = ref.read(isLeftSidebarOpen.notifier);
-                      notifier.state = !notifier.state;
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      activeTheme?.name ?? '테마를 선택하세요',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1D1D1F),
+            child: DragToMoveArea(
+              child: SizedBox(
+                height: double.infinity,
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        activeTheme?.name ?? '테마를 선택하세요',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1D1D1F),
+                        ),
                       ),
                     ),
-                  ),
-                  const Spacer(),
-                  SegmentedControl(
-                    value: engine,
-                    onChanged: (v) => ref.read(engineProvider.notifier).state = v,
-                  ),
-                  const SizedBox(width: 10),
-                  _SidebarToggleButton(
-                    isLeft: false,
-                    onTap: () {
-                      final notifier = ref.read(isRightSidebarOpen.notifier);
-                      notifier.state = !notifier.state;
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
+          SegmentedControl(
+            value: engine,
+            onChanged: (v) => ref.read(engineProvider.notifier).state = v,
+          ),
+          const SizedBox(width: 10),
+          _SidebarToggleButton(
+            isLeft: false,
+            onTap: () {
+              final notifier = ref.read(isRightSidebarOpen.notifier);
+              notifier.state = !notifier.state;
+            },
+          ),
+          const SizedBox(width: 16),
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: rightSidebarOpen ? 200 : 0,
