@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants.dart';
 import '../models/translate_response.dart';
 import '../models/classify_response.dart';
@@ -12,6 +13,18 @@ class ApiService{
         connectTimeout: Duration(seconds: 30),
         receiveTimeout: Duration(seconds: 30),
     ));
+
+    ApiService() {
+        _dio.interceptors.add(InterceptorsWrapper(
+            onRequest: (options, handler) {
+                final session = Supabase.instance.client.auth.currentSession;
+                if (session != null) {
+                    options.headers['Authorization'] = 'Bearer ${session.accessToken}';
+                }
+                handler.next(options);
+            },
+        ));
+    }
 
     Future<TranslateResponse> translateQuick(String themeId, String text) async{
         final response = await _dio.post(

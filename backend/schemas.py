@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from uuid import UUID
-from typing import Optional
 
 class TranslateRequest(BaseModel):
     theme_id: UUID
@@ -43,7 +42,7 @@ class VocabResponse(BaseModel):
     theme_id: UUID
     word_native: str
     word_target: str
-    example_sentence: Optional[str] = None
+    example_sentence: str | None = None 
 
     class Config:
         from_attributes = True
