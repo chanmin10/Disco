@@ -1,15 +1,9 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
-
-import '../providers/popup_provider.dart';
-
-/// Shared container so the global hotkey handler (registered in main(),
-/// outside the widget tree) and the popup widget read/write the same
-/// provider state as the rest of the app.
-final ProviderContainer container = ProviderContainer();
 
 const Size kMainWindowSize = Size(874, 600);
 const Size kPopupBaseSize = Size(420, 150);
@@ -27,45 +21,73 @@ Future<void> loadNativeTitleBarHeight() async {
   nativeTitleBarHeight = (await windowManager.getTitleBarHeight()).toDouble();
 }
 
-/// Drives the single native window between its two shapes: the full chat UI
-/// and the compact always-on-top popup. There's no multi-window plugin here,
-/// so "opening the popup" means the app's one window is resized, repositioned
-/// to the top-right of the screen, and made frameless/always-on-top; closing
-/// it restores whatever bounds/chrome the main window had before.
-class PopupWindowService {
-  PopupWindowService(this._container);
-  final ProviderContainer _container;
+/// Where the popup should sit: the top-right corner of the screen, computed
+/// fresh each time since it no longer inherits any position from the main
+/// window (they're independent windows now).
+Future<Rect> popupBounds(Size size) async {
+  final display = ui.PlatformDispatcher.instance.views.first.display;
+  final screenSize = display.size / display.devicePixelRatio;
+  final dx = screenSize.width - size.width - 20;
+  return Rect.fromLTWH(dx, 36, size.width, size.height);
+}
 
-  Rect? _savedMainBounds;
+/// Runs on the main window: opens/closes the global-hotkey popup as a real,
+/// separate OS window with its own Flutter engine (via desktop_multi_window)
+/// so toggling it never touches this window's own size, position, or
+/// visibility — the popup configures and shows itself; see [PopupSelfWindow]
+/// and main.dart's popup entrypoint.
+class PopupWindowService {
+  WindowController? _controller;
+
+  // Lives for the app's whole lifetime, same as this singleton — never
+  // cancelled, deliberately.
+  PopupWindowService() {
+    onWindowsChanged.listen((_) => _forgetIfClosed());
+  }
+
+  /// The popup can close itself (e.g. via Escape) without asking this window
+  /// first. This reconciles our tracked controller once that happens, so the
+  /// next hotkey press creates a fresh window instead of trying to close one
+  /// that's already gone.
+  Future<void> _forgetIfClosed() async {
+    final controller = _controller;
+    if (controller == null) return;
+    final all = await WindowController.getAll();
+    if (!all.any((c) => c.windowId == controller.windowId)) {
+      _controller = null;
+    }
+  }
+
+  Future<void> toggle() => _controller != null ? close() : open();
+
+  Future<void> open() async {
+    if (_controller != null) return;
+    // Created hidden so the popup can fully configure its own frameless,
+    // transparent, positioned chrome before it ever becomes visible —
+    // avoiding a flash of a default titled window.
+    _controller = await WindowController.create(
+      const WindowConfiguration(arguments: 'popup'),
+    );
+  }
+
+  Future<void> close() async {
+    final controller = _controller;
+    if (controller == null) return;
+    _controller = null;
+    await controller.invokeMethod('window_close');
+  }
+}
+
+final PopupWindowService popupWindowService = PopupWindowService();
+
+/// Runs inside the popup's own window/engine: gives it its floating,
+/// frameless, always-on-top look and grows/shrinks it to fit its content.
+/// window_manager calls made from here always target this window itself,
+/// never the main window.
+class PopupSelfWindow {
   double _lastHeight = kPopupBaseSize.height;
 
-  Future<Rect> _popupBounds(Size size) async {
-    final display = ui.PlatformDispatcher.instance.views.first.display;
-    final screenSize = display.size / display.devicePixelRatio;
-    final dx = screenSize.width - size.width - 20;
-    return Rect.fromLTWH(dx, 36, size.width, size.height);
-  }
-
-  /// Toggled by the global hotkey: opens the popup if it's closed, closes it
-  /// if it's already open (so pressing the shortcut again dismisses it).
-  Future<void> toggle() async {
-    if (_container.read(isPopupWindowProvider)) {
-      await hide();
-    } else {
-      await show();
-    }
-  }
-
-  Future<void> show() async {
-    if (_container.read(isPopupWindowProvider)) {
-      await windowManager.focus();
-      return;
-    }
-
-    _savedMainBounds = await windowManager.getBounds();
-    _lastHeight = kPopupBaseSize.height;
-    _container.read(popupControllerProvider.notifier).reset();
-
+  Future<void> configure() async {
     await windowManager.setAsFrameless();
     // window_manager's setAsFrameless() sets NSWindow.isOpaque = true as a
     // side effect, which makes a "clear" backgroundColor paint solid black
@@ -77,41 +99,16 @@ class PopupWindowService {
     await windowManager.setHasShadow(false);
     await windowManager.setBackgroundColor(Colors.transparent);
     await windowManager.setResizable(false);
-    await windowManager.setSkipTaskbar(true);
-    await windowManager.setBounds(await _popupBounds(kPopupBaseSize));
+    // Deliberately not calling setSkipTaskbar(true) here: it maps to
+    // NSApplication.setActivationPolicy, which is process-wide, not
+    // per-window. The old single-window popup could get away with it since
+    // the main window was never on-screen at the same time; now that both
+    // are real, independent windows, doing that would knock the main
+    // window's Dock icon out too for as long as the popup is open.
+    await windowManager.setBounds(await popupBounds(kPopupBaseSize));
     await windowManager.setAlwaysOnTop(true);
-
-    // Flip to the popup widget only after the window is already sized for
-    // it. Doing this earlier let QuickPopup (or worse, MainScreen on the
-    // way back in hide()) render for a frame at the wrong window size —
-    // that's what was causing the title bar's RenderFlex to overflow.
-    _container.read(isPopupWindowProvider.notifier).state = true;
-
     await windowManager.show();
     await windowManager.focus();
-  }
-
-  Future<void> hide() async {
-    final isOpen = _container.read(isPopupWindowProvider);
-    if (!isOpen) return;
-
-    await windowManager.setAlwaysOnTop(false);
-    await windowManager.setSkipTaskbar(false);
-    await windowManager.setResizable(true);
-    // The main window's permanent style is hidden (merged custom title bar
-    // — see main.dart's WindowOptions and _TitleBar), not normal, so that's
-    // what closing the popup needs to restore.
-    await windowManager.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: true);
-    await windowManager.setBackgroundColor(Colors.white);
-    if (_savedMainBounds != null) {
-      await windowManager.setBounds(_savedMainBounds!);
-    }
-
-    // See the comment in show(): flip back to MainScreen only once the
-    // window is already restored to its full size.
-    _container.read(isPopupWindowProvider.notifier).state = false;
-
-    await windowManager.hide();
   }
 
   /// Resizes the window's height to match the popup card's actual rendered
@@ -120,7 +117,6 @@ class PopupWindowService {
   /// fixed; height is clamped between the empty-state minimum and just shy
   /// of the screen height so the card never grows off-screen.
   Future<void> syncSize(double contentHeight) async {
-    if (!_container.read(isPopupWindowProvider)) return;
     final display = ui.PlatformDispatcher.instance.views.first.display;
     final screenHeight = display.size.height / display.devicePixelRatio;
     final maxHeight = screenHeight - 72;
@@ -129,6 +125,8 @@ class PopupWindowService {
     _lastHeight = target;
     await windowManager.setSize(Size(kPopupBaseSize.width, target));
   }
+
+  Future<void> close() => windowManager.close();
 }
 
-final PopupWindowService popupWindowService = PopupWindowService(container);
+final PopupSelfWindow popupSelfWindow = PopupSelfWindow();

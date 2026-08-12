@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import desktop_multi_window
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
@@ -21,6 +22,15 @@ class MainFlutterWindow: NSWindow {
     self.setFrame(windowFrame, display: true)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
+
+    // Each window the popup (or any future secondary window) opens gets its
+    // own separate Flutter engine, so plugins registered on the main
+    // window's engine above — window_manager, hotkey_manager, etc. — aren't
+    // automatically available there too. This registers them for every new
+    // window desktop_multi_window creates.
+    FlutterMultiWindowPlugin.setOnWindowCreatedCallback { controller in
+      RegisterGeneratedPlugins(registry: controller)
+    }
 
     super.awakeFromNib()
   }

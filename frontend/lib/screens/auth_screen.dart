@@ -12,6 +12,20 @@ const _kBorderColor = Color(0x14000000); // rgba(0,0,0,0.08)
 const _kFieldBorder = Color(0x24000000); // rgba(0,0,0,0.14)
 const _kTitleBarHeight = 52.0;
 
+/// Bundles a field's controller/focus/error state so validation can be
+/// driven by focus transitions instead of Form's built-in autovalidate
+/// (which has no "only after blur, and only if non-empty" mode).
+class _FieldState {
+  final TextEditingController controller = TextEditingController();
+  final FocusNode focusNode = FocusNode();
+  String? error;
+
+  void dispose() {
+    controller.dispose();
+    focusNode.dispose();
+  }
+}
+
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -20,20 +34,16 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final _loginFormKey = GlobalKey<FormState>();
-  final _signupFormKey = GlobalKey<FormState>();
-  final _forgotFormKey = GlobalKey<FormState>();
+  final _loginEmail = _FieldState();
+  final _loginPassword = _FieldState();
+  final _signupEmail = _FieldState();
+  final _signupPassword = _FieldState();
+  final _signupConfirm = _FieldState();
+  final _forgotEmail = _FieldState();
 
-  final _loginEmailController = TextEditingController();
-  final _loginPasswordController = TextEditingController();
-  final _signupEmailController = TextEditingController();
-  final _signupPasswordController = TextEditingController();
-  final _signupConfirmController = TextEditingController();
-  final _forgotEmailController = TextEditingController();
-
-  final _loginPasswordFocus = FocusNode();
-  final _signupPasswordFocus = FocusNode();
-  final _signupConfirmFocus = FocusNode();
+  bool _loginSubmitAttempted = false;
+  bool _signupSubmitAttempted = false;
+  bool _forgotSubmitAttempted = false;
 
   _AuthView _view = _AuthView.login;
   bool _obscureLoginPassword = true;
@@ -44,21 +54,47 @@ class _AuthScreenState extends State<AuthScreen> {
   String _sentEmail = '';
 
   @override
+  void initState() {
+    super.initState();
+    _bindField(_loginEmail, _validateEmail, () => _loginSubmitAttempted);
+    _bindField(_loginPassword, _validateLoginPassword, () => _loginSubmitAttempted);
+    _bindField(_signupEmail, _validateEmail, () => _signupSubmitAttempted);
+    _bindField(_signupPassword, _validateSignupPassword, () => _signupSubmitAttempted);
+    _bindField(_signupConfirm, _validateConfirmPassword, () => _signupSubmitAttempted);
+    _bindField(_forgotEmail, _validateEmail, () => _forgotSubmitAttempted);
+  }
+
+  @override
   void dispose() {
-    _loginEmailController.dispose();
-    _loginPasswordController.dispose();
-    _signupEmailController.dispose();
-    _signupPasswordController.dispose();
-    _signupConfirmController.dispose();
-    _forgotEmailController.dispose();
-    _loginPasswordFocus.dispose();
-    _signupPasswordFocus.dispose();
-    _signupConfirmFocus.dispose();
+    _loginEmail.dispose();
+    _loginPassword.dispose();
+    _signupEmail.dispose();
+    _signupPassword.dispose();
+    _signupConfirm.dispose();
+    _forgotEmail.dispose();
     super.dispose();
   }
 
-  String? _validateEmail(String? v) {
-    final value = (v ?? '').trim();
+  /// Shows [field]'s error only once the user has finished editing it: it
+  /// clears the moment they type (so nothing flashes mid-keystroke) and is
+  /// recomputed on blur — but only displayed then if the field still has
+  /// text in it, unless the owning form already had a submit attempt (which
+  /// forces "required" errors on blank fields to stay visible).
+  void _bindField(_FieldState field, String? Function(String) validator, bool Function() submitAttempted) {
+    field.controller.addListener(() {
+      if (field.error != null) setState(() => field.error = null);
+    });
+    field.focusNode.addListener(() {
+      if (field.focusNode.hasFocus) return;
+      final text = field.controller.text;
+      if (text.trim().isEmpty && !submitAttempted()) return;
+      final result = validator(text);
+      if (result != field.error) setState(() => field.error = result);
+    });
+  }
+
+  String? _validateEmail(String v) {
+    final value = v.trim();
     if (value.isEmpty) return '이메일을 입력해주세요';
     if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value)) {
       return '올바른 이메일 형식이 아닙니다';
@@ -66,24 +102,23 @@ class _AuthScreenState extends State<AuthScreen> {
     return null;
   }
 
-  String? _validateLoginPassword(String? v) {
-    if (v == null || v.isEmpty) return '비밀번호를 입력해주세요';
+  String? _validateLoginPassword(String v) {
+    if (v.isEmpty) return '비밀번호를 입력해주세요';
     return null;
   }
 
-  String? _validateSignupPassword(String? v) {
-    final value = v ?? '';
-    if (value.length < 8) return '8자 이상 입력해주세요';
+  String? _validateSignupPassword(String v) {
+    if (v.length < 8) return '8자 이상 입력해주세요';
     var kinds = 0;
-    if (RegExp(r'[a-zA-Z]').hasMatch(value)) kinds++;
-    if (RegExp(r'[0-9]').hasMatch(value)) kinds++;
-    if (RegExp(r'[^a-zA-Z0-9]').hasMatch(value)) kinds++;
+    if (RegExp(r'[a-zA-Z]').hasMatch(v)) kinds++;
+    if (RegExp(r'[0-9]').hasMatch(v)) kinds++;
+    if (RegExp(r'[^a-zA-Z0-9]').hasMatch(v)) kinds++;
     if (kinds < 2) return '영문, 숫자, 특수문자 중 2가지 이상 조합해주세요';
     return null;
   }
 
-  String? _validateConfirmPassword(String? v) {
-    if (v != _signupPasswordController.text) return '비밀번호가 일치하지 않습니다';
+  String? _validateConfirmPassword(String v) {
+    if (v != _signupPassword.controller.text) return '비밀번호가 일치하지 않습니다';
     return null;
   }
 
@@ -109,15 +144,29 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _submitLogin() async {
     if (_isSubmitting) return;
-    if (!_loginFormKey.currentState!.validate()) return;
+    final emailError = _validateEmail(_loginEmail.controller.text);
+    final passwordError = _validateLoginPassword(_loginPassword.controller.text);
+    setState(() {
+      _loginSubmitAttempted = true;
+      _loginEmail.error = emailError;
+      _loginPassword.error = passwordError;
+    });
+    if (emailError != null) {
+      _loginEmail.focusNode.requestFocus();
+      return;
+    }
+    if (passwordError != null) {
+      _loginPassword.focusNode.requestFocus();
+      return;
+    }
     setState(() {
       _isSubmitting = true;
       _errorText = null;
     });
     try {
       await Supabase.instance.client.auth.signInWithPassword(
-        email: _loginEmailController.text.trim(),
-        password: _loginPasswordController.text,
+        email: _loginEmail.controller.text.trim(),
+        password: _loginPassword.controller.text,
       );
       // On success, main.dart's onAuthStateChange listener routes to MainScreen.
     } on AuthException catch (e) {
@@ -133,16 +182,36 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _submitSignup() async {
     if (_isSubmitting) return;
-    if (!_signupFormKey.currentState!.validate()) return;
+    final emailError = _validateEmail(_signupEmail.controller.text);
+    final passwordError = _validateSignupPassword(_signupPassword.controller.text);
+    final confirmError = _validateConfirmPassword(_signupConfirm.controller.text);
+    setState(() {
+      _signupSubmitAttempted = true;
+      _signupEmail.error = emailError;
+      _signupPassword.error = passwordError;
+      _signupConfirm.error = confirmError;
+    });
+    if (emailError != null) {
+      _signupEmail.focusNode.requestFocus();
+      return;
+    }
+    if (passwordError != null) {
+      _signupPassword.focusNode.requestFocus();
+      return;
+    }
+    if (confirmError != null) {
+      _signupConfirm.focusNode.requestFocus();
+      return;
+    }
     setState(() {
       _isSubmitting = true;
       _errorText = null;
     });
-    final email = _signupEmailController.text.trim();
+    final email = _signupEmail.controller.text.trim();
     try {
       await Supabase.instance.client.auth.signUp(
         email: email,
-        password: _signupPasswordController.text,
+        password: _signupPassword.controller.text,
       );
       if (!mounted) return;
       setState(() {
@@ -167,12 +236,20 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _submitForgot() async {
     if (_isSubmitting) return;
-    if (!_forgotFormKey.currentState!.validate()) return;
+    final emailError = _validateEmail(_forgotEmail.controller.text);
+    setState(() {
+      _forgotSubmitAttempted = true;
+      _forgotEmail.error = emailError;
+    });
+    if (emailError != null) {
+      _forgotEmail.focusNode.requestFocus();
+      return;
+    }
     setState(() {
       _isSubmitting = true;
       _errorText = null;
     });
-    final email = _forgotEmailController.text.trim();
+    final email = _forgotEmail.controller.text.trim();
     try {
       await Supabase.instance.client.auth.resetPasswordForEmail(email);
       if (!mounted) return;
@@ -313,15 +390,47 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  InputDecoration _fieldDecoration({required String hint, String? errorText, Widget? suffixIcon}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Color(0xFFB0B0B6)),
+      filled: true,
+      fillColor: const Color(0xFFF7F7F8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+      suffixIcon: suffixIcon,
+      errorText: errorText,
+      errorMaxLines: 2,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: const BorderSide(color: _kFieldBorder, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: const BorderSide(color: _kFieldBorder, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: const BorderSide(color: _kAccent, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: const BorderSide(color: _kDanger, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: const BorderSide(color: _kDanger, width: 1.5),
+      ),
+      errorStyle: const TextStyle(fontSize: 11.5, color: _kDanger),
+    );
+  }
+
   Widget _buildField({
     required String label,
-    required TextEditingController controller,
+    required _FieldState field,
     required String hint,
-    String? Function(String?)? validator,
     bool obscureText = false,
     TextInputType? keyboardType,
     TextInputAction? textInputAction,
-    FocusNode? focusNode,
     void Function(String)? onFieldSubmitted,
     Widget? suffixIcon,
     Iterable<String>? autofillHints,
@@ -335,46 +444,16 @@ class _AuthScreenState extends State<AuthScreen> {
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF3A3A3C))),
           ),
-          TextFormField(
-            controller: controller,
-            focusNode: focusNode,
+          TextField(
+            controller: field.controller,
+            focusNode: field.focusNode,
             obscureText: obscureText,
             keyboardType: keyboardType,
             textInputAction: textInputAction,
-            onFieldSubmitted: onFieldSubmitted,
-            validator: validator,
+            onSubmitted: onFieldSubmitted,
             autofillHints: autofillHints,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
             style: const TextStyle(fontSize: 14, color: Color(0xFF1D1D1F)),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(color: Color(0xFFB0B0B6)),
-              filled: true,
-              fillColor: const Color(0xFFF7F7F8),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-              suffixIcon: suffixIcon,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _kFieldBorder, width: 1.5),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _kFieldBorder, width: 1.5),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _kAccent, width: 1.5),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _kDanger, width: 1.5),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _kDanger, width: 1.5),
-              ),
-              errorStyle: const TextStyle(fontSize: 11.5, color: _kDanger),
-            ),
+            decoration: _fieldDecoration(hint: hint, errorText: field.error, suffixIcon: suffixIcon),
           ),
         ],
       ),
@@ -429,150 +508,111 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildLoginForm() {
-    return Form(
-      key: _loginFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader('로그인', '번역하며 나만의 단어장을 만들어보세요'),
-          if (_errorText != null) _buildErrorBanner(),
-          _buildField(
-            label: '이메일',
-            controller: _loginEmailController,
-            hint: 'you@example.com',
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            validator: _validateEmail,
-            autofillHints: const [AutofillHints.email],
-            onFieldSubmitted: (_) => _loginPasswordFocus.requestFocus(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader('로그인', '번역하며 나만의 단어장을 만들어보세요'),
+        if (_errorText != null) _buildErrorBanner(),
+        _buildField(
+          label: '이메일',
+          field: _loginEmail,
+          hint: 'you@example.com',
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.email],
+          onFieldSubmitted: (_) => _loginPassword.focusNode.requestFocus(),
+        ),
+        _buildField(
+          label: '비밀번호',
+          field: _loginPassword,
+          hint: '비밀번호',
+          obscureText: _obscureLoginPassword,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.password],
+          onFieldSubmitted: (_) => _submitLogin(),
+          suffixIcon: _buildVisibilityToggle(
+            _obscureLoginPassword,
+            () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
           ),
-          _buildField(
-            label: '비밀번호',
-            controller: _loginPasswordController,
-            focusNode: _loginPasswordFocus,
-            hint: '비밀번호',
-            obscureText: _obscureLoginPassword,
-            textInputAction: TextInputAction.done,
-            validator: _validateLoginPassword,
-            autofillHints: const [AutofillHints.password],
-            onFieldSubmitted: (_) => _submitLogin(),
-            suffixIcon: _buildVisibilityToggle(
-              _obscureLoginPassword,
-              () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
-            ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => _switchView(_AuthView.forgot),
+            child: const Text('비밀번호를 잊으셨나요?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _kAccent)),
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => _switchView(_AuthView.forgot),
-              child: const Text('비밀번호를 잊으셨나요?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _kAccent)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _buildPrimaryButton(label: '로그인', loading: _isSubmitting, onPressed: _submitLogin),
-          const SizedBox(height: 16),
-          _buildSwitchLine('계정이 없으신가요? ', '회원가입', () => _switchView(_AuthView.signup)),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        _buildPrimaryButton(label: '로그인', loading: _isSubmitting, onPressed: _submitLogin),
+        const SizedBox(height: 16),
+        _buildSwitchLine('계정이 없으신가요? ', '회원가입', () => _switchView(_AuthView.signup)),
+      ],
     );
   }
 
   Widget _buildSignupForm() {
-    return Form(
-      key: _signupFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader('회원가입', '몇 가지 정보만 입력하면 바로 시작할 수 있어요'),
-          if (_errorText != null) _buildErrorBanner(),
-          _buildField(
-            label: '이메일',
-            controller: _signupEmailController,
-            hint: 'you@example.com',
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            validator: _validateEmail,
-            autofillHints: const [AutofillHints.email],
-            onFieldSubmitted: (_) => _signupPasswordFocus.requestFocus(),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text('비밀번호', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF3A3A3C))),
-                ),
-                TextFormField(
-                  controller: _signupPasswordController,
-                  focusNode: _signupPasswordFocus,
-                  obscureText: _obscureSignupPassword,
-                  textInputAction: TextInputAction.next,
-                  validator: _validateSignupPassword,
-                  autofillHints: const [AutofillHints.newPassword],
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  onChanged: (_) => setState(() {}),
-                  onFieldSubmitted: (_) => _signupConfirmFocus.requestFocus(),
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF1D1D1F)),
-                  decoration: InputDecoration(
-                    hintText: '8자 이상, 영문/숫자/특수문자 조합',
-                    hintStyle: const TextStyle(color: Color(0xFFB0B0B6)),
-                    filled: true,
-                    fillColor: const Color(0xFFF7F7F8),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-                    suffixIcon: _buildVisibilityToggle(
-                      _obscureSignupPassword,
-                      () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
-                      borderSide: const BorderSide(color: _kFieldBorder, width: 1.5),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
-                      borderSide: const BorderSide(color: _kFieldBorder, width: 1.5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
-                      borderSide: const BorderSide(color: _kAccent, width: 1.5),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
-                      borderSide: const BorderSide(color: _kDanger, width: 1.5),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
-                      borderSide: const BorderSide(color: _kDanger, width: 1.5),
-                    ),
-                    errorStyle: const TextStyle(fontSize: 11.5, color: _kDanger),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader('회원가입', '몇 가지 정보만 입력하면 바로 시작할 수 있어요'),
+        if (_errorText != null) _buildErrorBanner(),
+        _buildField(
+          label: '이메일',
+          field: _signupEmail,
+          hint: 'you@example.com',
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          autofillHints: const [AutofillHints.email],
+          onFieldSubmitted: (_) => _signupPassword.focusNode.requestFocus(),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text('비밀번호', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF3A3A3C))),
+              ),
+              TextField(
+                controller: _signupPassword.controller,
+                focusNode: _signupPassword.focusNode,
+                obscureText: _obscureSignupPassword,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.newPassword],
+                onSubmitted: (_) => _signupConfirm.focusNode.requestFocus(),
+                style: const TextStyle(fontSize: 14, color: Color(0xFF1D1D1F)),
+                decoration: _fieldDecoration(
+                  hint: '8자 이상, 영문/숫자/특수문자 조합',
+                  errorText: _signupPassword.error,
+                  suffixIcon: _buildVisibilityToggle(
+                    _obscureSignupPassword,
+                    () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
                   ),
                 ),
-                if (_signupPasswordController.text.isNotEmpty) _buildStrengthMeter(_signupPasswordController.text),
-              ],
-            ),
+              ),
+              if (_signupPassword.controller.text.isNotEmpty) _buildStrengthMeter(_signupPassword.controller.text),
+            ],
           ),
-          _buildField(
-            label: '비밀번호 확인',
-            controller: _signupConfirmController,
-            focusNode: _signupConfirmFocus,
-            hint: '비밀번호를 다시 입력해주세요',
-            obscureText: _obscureConfirmPassword,
-            textInputAction: TextInputAction.done,
-            validator: _validateConfirmPassword,
-            autofillHints: const [AutofillHints.newPassword],
-            onFieldSubmitted: (_) => _submitSignup(),
-            suffixIcon: _buildVisibilityToggle(
-              _obscureConfirmPassword,
-              () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-            ),
+        ),
+        _buildField(
+          label: '비밀번호 확인',
+          field: _signupConfirm,
+          hint: '비밀번호를 다시 입력해주세요',
+          obscureText: _obscureConfirmPassword,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.newPassword],
+          onFieldSubmitted: (_) => _submitSignup(),
+          suffixIcon: _buildVisibilityToggle(
+            _obscureConfirmPassword,
+            () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
           ),
-          const SizedBox(height: 8),
-          _buildPrimaryButton(label: '회원가입', loading: _isSubmitting, onPressed: _submitSignup),
-          const SizedBox(height: 16),
-          _buildSwitchLine('이미 계정이 있으신가요? ', '로그인', () => _switchView(_AuthView.login)),
-        ],
-      ),
+        ),
+        const SizedBox(height: 8),
+        _buildPrimaryButton(label: '회원가입', loading: _isSubmitting, onPressed: _submitSignup),
+        const SizedBox(height: 16),
+        _buildSwitchLine('이미 계정이 있으신가요? ', '로그인', () => _switchView(_AuthView.login)),
+      ],
     );
   }
 
@@ -609,33 +649,29 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildForgotForm() {
-    return Form(
-      key: _forgotFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader('비밀번호 찾기', '가입하신 이메일로 재설정 링크를 보내드려요'),
-          if (_errorText != null) _buildErrorBanner(),
-          _buildField(
-            label: '이메일',
-            controller: _forgotEmailController,
-            hint: 'you@example.com',
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-            validator: _validateEmail,
-            autofillHints: const [AutofillHints.email],
-            onFieldSubmitted: (_) => _submitForgot(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader('비밀번호 찾기', '가입하신 이메일로 재설정 링크를 보내드려요'),
+        if (_errorText != null) _buildErrorBanner(),
+        _buildField(
+          label: '이메일',
+          field: _forgotEmail,
+          hint: 'you@example.com',
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.email],
+          onFieldSubmitted: (_) => _submitForgot(),
+        ),
+        _buildPrimaryButton(label: '재설정 메일 보내기', loading: _isSubmitting, onPressed: _submitForgot),
+        const SizedBox(height: 12),
+        Center(
+          child: TextButton(
+            onPressed: () => _switchView(_AuthView.login),
+            child: const Text('로그인으로 돌아가기', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: _kAccent)),
           ),
-          _buildPrimaryButton(label: '재설정 메일 보내기', loading: _isSubmitting, onPressed: _submitForgot),
-          const SizedBox(height: 12),
-          Center(
-            child: TextButton(
-              onPressed: () => _switchView(_AuthView.login),
-              child: const Text('로그인으로 돌아가기', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: _kAccent)),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

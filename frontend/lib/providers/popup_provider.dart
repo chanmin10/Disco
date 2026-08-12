@@ -1,11 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'translation_provider.dart';
-import '../models/chat_message.dart';
-
-/// Whether the single native window is currently showing the global-hotkey
-/// popup instead of the main chat UI. [PopupWindowService] flips this after
-/// it finishes resizing/repositioning the OS window.
-final isPopupWindowProvider = StateProvider<bool>((ref) => false);
 
 class PopupState {
   final String text;
@@ -47,8 +41,11 @@ class PopupController extends StateNotifier<PopupState> {
   PopupController(this._ref) : super(const PopupState());
   final Ref _ref;
 
-  /// Clears the popup back to a blank slate, defaulting the target room to
-  /// whichever theme is currently active in the main window.
+  /// Clears the popup back to a blank slate. The popup now runs in its own
+  /// window/engine with its own provider container, so there's no shared
+  /// "currently active theme" to inherit from the main window anymore —
+  /// [activeThemeProvider] naturally falls back to the first theme in this
+  /// container's own (freshly fetched) theme list.
   void reset() {
     final activeTheme = _ref.read(activeThemeProvider);
     state = PopupState(themeId: activeTheme?.id);
@@ -86,43 +83,28 @@ class PopupController extends StateNotifier<PopupState> {
 
     final engine = _ref.read(engineProvider);
     final api = _ref.read(apiServiceProvider);
-    final chatNotifier = _ref.read(chatProvider.notifier);
-    final vocabNotifier = _ref.read(vocabListProvider.notifier);
 
     // Fresh PopupState so the previous result/saved badge doesn't flash
     // while the new request is in flight, and the input is left blank and
     // ready for the next phrase instead of showing what was just submitted.
     state = PopupState(themeId: themeId, loading: true);
-    chatNotifier.addMessage(
-      themeId,
-      ChatMessage(id: 'u${DateTime.now().microsecondsSinceEpoch}', role: 'user', text: text),
-    );
 
     try {
       if (engine == 'quick') {
         // Quick mode: Google Translate, then classify separately — /translate/quick
         // never persists a word itself, so classify is what may save it.
+        // Both endpoints persist server-side; the main window picks up any
+        // new vocab/theme changes next time it refreshes its own lists.
         final res = await api.translateQuick(themeId, text);
-        chatNotifier.addMessage(
-          themeId,
-          ChatMessage(id: 'b${DateTime.now().microsecondsSinceEpoch}', role: 'bot', text: res.response),
-        );
         state = state.copyWith(resultText: res.response, loading: false);
 
         final classified = await api.classify(themeId, res.textNative, res.textTarget);
         if (classified.isVocab) {
-          await vocabNotifier.refresh(themeId);
           state = state.copyWith(saved: true);
         }
       } else {
-        // AI mode: /translate/ai already saves the word internally, so classify
-        // must NOT be called here — that would double-save.
+        // AI mode: /translate/ai already saves the word internally.
         final res = await api.translateAi(themeId, text);
-        chatNotifier.addMessage(
-          themeId,
-          ChatMessage(id: 'b${DateTime.now().microsecondsSinceEpoch}', role: 'bot', text: res.text),
-        );
-        await vocabNotifier.refresh(themeId);
         state = state.copyWith(resultText: res.text, loading: false, saved: true);
       }
     } catch (_) {

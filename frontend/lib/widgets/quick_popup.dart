@@ -29,7 +29,16 @@ class _QuickPopupState extends ConsumerState<QuickPopup> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _inputFocusNode.requestFocus();
+      if (!mounted) return;
+      // The popup now boots as its own window/engine with a fresh provider
+      // container each time it opens, so there's no stale state from a prior
+      // session to clear — this just resolves the default target theme.
+      // Deferred to after the first frame: calling this during initState
+      // modifies popupControllerProvider while the widget tree (including
+      // this same subtree's first build) is still in progress, which
+      // Riverpod rejects.
+      ref.read(popupControllerProvider.notifier).reset();
+      _inputFocusNode.requestFocus();
     });
   }
 
@@ -52,7 +61,7 @@ class _QuickPopupState extends ConsumerState<QuickPopup> {
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.escape) {
-          popupWindowService.hide();
+          popupSelfWindow.close();
           return KeyEventResult.handled;
         }
         if (event.logicalKey == LogicalKeyboardKey.tab) {
@@ -113,7 +122,7 @@ class _PopupCard extends ConsumerWidget {
       if (!context.mounted) return;
       final box = context.findRenderObject() as RenderBox?;
       if (box == null || !box.hasSize) return;
-      popupWindowService.syncSize(box.size.height);
+      popupSelfWindow.syncSize(box.size.height);
     });
 
     return Container(

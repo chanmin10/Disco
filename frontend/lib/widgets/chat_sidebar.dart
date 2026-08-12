@@ -21,11 +21,24 @@ class ChatSidebar extends ConsumerWidget {
         children: [
           Expanded(
             child: themesAsync.when(
-              data: (themes) => ListView(
-                padding: const EdgeInsets.all(8),
-                children: [
-                  for (final theme in themes)
-                    if (!hiddenIds.contains(theme.id))
+              data: (themes) {
+                final visibleThemes = themes.where((t) => !hiddenIds.contains(t.id)).toList();
+                if (visibleThemes.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        '새 테마를 만드세요',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 11, color: Color(0xFF9A9AA0)),
+                      ),
+                    ),
+                  );
+                }
+                return ListView(
+                  padding: const EdgeInsets.all(8),
+                  children: [
+                    for (final theme in visibleThemes)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 2),
                         child: SwipeToDelete(
@@ -55,8 +68,9 @@ class ChatSidebar extends ConsumerWidget {
                           ),
                         ),
                       ),
-                ],
-              ),
+                  ],
+                );
+              },
               loading: () => const Center(
                 child: SizedBox(
                   width: 16,
@@ -139,7 +153,7 @@ class _NewThemeButton extends ConsumerWidget {
                 Icon(Icons.add_circle_outline, size: 15, color: Color(0xFFA1A1A6)),
                 SizedBox(width: 8),
                 Text(
-                  '새 채팅방',
+                  '새 테마 추가',
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w500,

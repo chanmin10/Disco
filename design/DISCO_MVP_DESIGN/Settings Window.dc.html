@@ -36,9 +36,9 @@
                 <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;min-height:44px;cursor:{{ row.cursor }};" onClick="{{ row.onRowClick }}" style-hover="background:rgba(0,0,0,0.025);">
                   <div style="width:28px;height:28px;border-radius:7px;background:{{ row.iconBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <sc-if value="{{ row.isShortcut }}" hint-placeholder-val="{{ false }}"><span style="color:#fff;font-size:15px;font-weight:600;">&#8984;</span></sc-if>
-                    <sc-if value="{{ row.isEngine }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.25" stroke="white" stroke-width="1.4"></circle><path d="M1.75 8h12.5M8 1.75c1.7 1.8 1.7 10.7 0 12.5M8 1.75c-1.7 1.8-1.7 10.7 0 12.5" stroke="white" stroke-width="1.2" fill="none"></path></svg></sc-if>
-                    <sc-if value="{{ row.isLanguage }}" hint-placeholder-val="{{ false }}"><svg width="16" height="14" viewBox="0 0 16 14" fill="none"><rect x="1" y="1" width="14" height="9" rx="2.5" fill="white"></rect><path d="M5 10l-1.8 3 3.6-1.8z" fill="white"></path></svg></sc-if>
+                    <sc-if value="{{ row.isLanguage }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="white" stroke-width="1.3"></circle><ellipse cx="8" cy="8" rx="2.7" ry="6.5" stroke="white" stroke-width="1.2"></ellipse><line x1="1.5" y1="8" x2="14.5" y2="8" stroke="white" stroke-width="1.2"></line><path d="M2.6 5h10.8M2.6 11h10.8" stroke="white" stroke-width="1.1"></path></svg></sc-if>
                     <sc-if value="{{ row.isInfo }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.25" stroke="white" stroke-width="1.4"></circle><rect x="7.25" y="7" width="1.5" height="4.25" rx="0.75" fill="white"></rect><circle cx="8" cy="4.75" r="0.9" fill="white"></circle></svg></sc-if>
+                    <sc-if value="{{ row.isAccount }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="3" fill="white"></circle><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5" fill="white"></path></svg></sc-if>
                   </div>
                   <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;">
                     <span style="font-size:13px;font-weight:500;color:#1d1d1f;">{{ row.title }}</span>
@@ -47,11 +47,11 @@
                   <sc-if value="{{ row.isShortcut }}" hint-placeholder-val="{{ false }}">
                     <div style="padding:5px 10px;background:#F0F0F2;border-radius:6px;font-size:12.5px;font-weight:600;color:{{ row.shortcutColor }};min-width:52px;text-align:center;">{{ row.shortcutLabel }}</div>
                   </sc-if>
-                  <sc-if value="{{ row.isEngine }}" hint-placeholder-val="{{ false }}">
-                    <dc-import name="SegmentedControl" value="{{ engine }}" on-change="{{ setEngine }}" hint-size="170px,32px"></dc-import>
-                  </sc-if>
                   <sc-if value="{{ row.hasTrailingText }}" hint-placeholder-val="{{ false }}">
                     <span style="font-size:12.5px;color:#86868b;">{{ row.trailingText }}</span>
+                  </sc-if>
+                  <sc-if value="{{ row.isLogout }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" onClick="{{ row.onLogoutClick }}" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid rgba(255,59,48,0.35);background:#fff;color:#FF3B30;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;">로그아웃</button>
                   </sc-if>
                 </div>
                 <sc-if value="{{ row.isLanguageExpanded }}" hint-placeholder-val="{{ false }}">
@@ -75,22 +75,21 @@
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;blue&quot;, &quot;options&quot;: [&quot;blue&quot;,&quot;purple&quot;,&quot;pink&quot;,&quot;red&quot;,&quot;orange&quot;,&quot;yellow&quot;,&quot;green&quot;,&quot;graphite&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}, &quot;density&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;comfortable&quot;, &quot;options&quot;: [&quot;comfortable&quot;,&quot;compact&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;blue&quot;, &quot;options&quot;: [&quot;blue&quot;,&quot;purple&quot;,&quot;pink&quot;,&quot;red&quot;,&quot;orange&quot;,&quot;yellow&quot;,&quot;green&quot;,&quot;graphite&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}, &quot;density&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;comfortable&quot;, &quot;options&quot;: [&quot;comfortable&quot;,&quot;compact&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Appearance&quot;}, &quot;onLogout&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;() =&gt; void&quot;}}">
 class Component extends DCLogic {
   accentMap = { blue:'#0A84FF', purple:'#AF52DE', pink:'#FF375F', red:'#FF453A', orange:'#FF9F0A', yellow:'#FFD60A', green:'#32D74B', graphite:'#8E8E93' };
-  iconBgByType = { shortcut:'#5E5CE6', engine:'#32ADE6', language:'#34C759', info:'#8E8E93' };
+  iconBgByType = { shortcut:'#5E5CE6', language:'#34C759', info:'#8E8E93', account:'#FF9F0A' };
   languageOptions = ['영어', '스페인어', '일본어', '한국어'];
 
   rawSections = [
+    { id:'account', header:'계정', rows:[
+      { id:'accountInfo', type:'account', title:'test@example.com' },
+    ]},
     { id:'shortcuts', header:'단축키', rows:[
       { id:'globalShortcut', type:'shortcut', title:'전역 단축키', subtitle:'번역 팝업 열기' },
     ]},
-    { id:'engine', header:'번역 엔진', rows:[
-      { id:'defaultEngine', type:'engine', title:'기본 번역 엔진', subtitle:'채팅 시작 시 기본으로 사용' },
-    ]},
     { id:'language', header:'언어', rows:[
-      { id:'nativeLanguage', type:'language', title:'모국어', subtitle:'번역의 기준이 되는 언어', langKey:'native' },
-      { id:'targetLanguage', type:'language', title:'번역 언어', subtitle:'기본으로 번역할 언어', langKey:'target' },
+      { id:'nativeLanguage', type:'language', title:'언어', langKey:'native' },
     ]},
     { id:'info', header:'정보', rows:[
       { id:'version', type:'info', title:'버전', trailingText:'1.0.0 (MVP)' },
@@ -99,12 +98,10 @@ class Component extends DCLogic {
   ];
 
   state = {
-    engine: 'general',
     recording: false,
     shortcut: '⌘⇧K',
     nativeLanguage: '한국어',
-    targetLanguage: '영어',
-    languageOpen: { native: false, target: false },
+    languageOpen: { native: false },
   };
 
   componentWillUnmount() {
@@ -112,7 +109,6 @@ class Component extends DCLogic {
   }
 
   accentHex() { return this.accentMap[this.props.accentColor ?? 'blue'] || '#0A84FF'; }
-  setEngine = (v) => this.setState({ engine: v });
 
   startRecording = () => {
     if (this.state.recording) return;
@@ -133,11 +129,10 @@ class Component extends DCLogic {
   };
 
   toggleLanguage(key) {
-    this.setState(s => ({ languageOpen: { native: false, target: false, [key]: !s.languageOpen[key] } }));
+    this.setState(s => ({ languageOpen: { native: !s.languageOpen[key] } }));
   }
   setLanguage(key, value) {
-    const patch = key === 'native' ? { nativeLanguage: value } : { targetLanguage: value };
-    this.setState(s => ({ ...patch, languageOpen: { ...s.languageOpen, [key]: false } }));
+    this.setState(s => ({ nativeLanguage: value, languageOpen: { ...s.languageOpen, [key]: false } }));
   }
 
   renderVals() {
@@ -151,11 +146,11 @@ class Component extends DCLogic {
       rows: sec.rows.map((row, i) => {
         const isLast = i === sec.rows.length - 1;
         const isShortcut = row.type === 'shortcut';
-        const isEngine = row.type === 'engine';
         const isLanguage = row.type === 'language';
         const isInfo = row.type === 'info';
+        const isAccount = row.type === 'account';
         const isLanguageOpen = isLanguage && this.state.languageOpen[row.langKey];
-        const currentLangVal = isLanguage ? (row.langKey === 'native' ? this.state.nativeLanguage : this.state.targetLanguage) : '';
+        const currentLangVal = isLanguage ? this.state.nativeLanguage : '';
         return {
           id: row.id,
           title: row.title,
@@ -164,7 +159,9 @@ class Component extends DCLogic {
           borderStyle: isLast ? 'none' : '1px solid rgba(0,0,0,0.07)',
           padTop: padY,
           iconBg: this.iconBgByType[row.type] || '#8E8E93',
-          isShortcut, isEngine, isLanguage, isInfo,
+          isShortcut, isLanguage, isInfo, isAccount,
+          isLogout: isAccount,
+          onLogoutClick: isAccount ? (() => this.props.onLogout && this.props.onLogout()) : (() => {}),
           cursor: (isLanguage || isShortcut) ? 'pointer' : 'default',
           onRowClick: isLanguage ? (() => this.toggleLanguage(row.langKey)) : (isShortcut ? (() => this.startRecording()) : (() => {})),
           shortcutLabel: isShortcut ? (this.state.recording ? '키를 누르세요…' : this.state.shortcut) : '',
@@ -180,8 +177,6 @@ class Component extends DCLogic {
     return {
       accent,
       sections,
-      engine: this.state.engine,
-      setEngine: this.setEngine,
     };
   }
 }
