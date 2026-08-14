@@ -1,0 +1,12 @@
+/* The popup window's Electron BrowserWindow height is driven by its content
+   (see App.tsx's ResizeObserver + window.api.resizePopup), so unlike the other
+   windows it must NOT be stretched to fill a fixed 100vh. */
+html,
+body {
+  height: auto;
+  background: transparent;
+}
+
+#root {
+  height: auto;
+}
