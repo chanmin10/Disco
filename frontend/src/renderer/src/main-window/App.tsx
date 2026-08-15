@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ChatMessage, Engine, Theme } from '../shared/types'
 import { useThemes } from '../shared/hooks/useThemes'
 import { useVocab } from '../shared/hooks/useVocab'
@@ -32,6 +32,19 @@ function App(): React.JSX.Element {
   }
 
   const activeTheme = themes.find((t) => t.id === activeThemeId) ?? null
+
+  // Tab is a local shortcut for toggling the translate engine, same as the popup window —
+  // explicitly not a global shortcut, only active while this window is focused.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        setEngine((prev) => (prev === 'general' ? 'quick' : 'general'))
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const handleSend = async (text: string): Promise<void> => {
     if (!activeThemeId) return

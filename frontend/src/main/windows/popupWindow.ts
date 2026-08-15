@@ -5,7 +5,9 @@ import { windowRegistry, loadRenderer } from './windowRegistry'
 const WIDTH = 420
 const INITIAL_HEIGHT = 150
 const MIN_HEIGHT = 120
-const MAX_HEIGHT = 500
+// The renderer always adds a fixed reserve on top of the card's own content height so the theme
+// dropdown menu has room without ever resizing the window itself (see popup-window/App.tsx).
+const MAX_HEIGHT = 620
 const MARGIN_TOP = 10
 const MARGIN_RIGHT = 16
 
@@ -35,7 +37,10 @@ export function createPopupWindow(): BrowserWindow {
     show: false,
     frame: false,
     transparent: true,
-    hasShadow: true,
+    // The window's real bounds are taller than the visible card (extra headroom reserved for
+    // the theme dropdown — see App.tsx), so a native OS shadow would trace that whole invisible
+    // rectangle and look like a stray border. The card draws its own CSS box-shadow instead.
+    hasShadow: false,
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
@@ -51,9 +56,6 @@ export function createPopupWindow(): BrowserWindow {
 
   win.on('closed', () => {
     windowRegistry.popup = null
-  })
-  win.on('blur', () => {
-    if (win.isVisible()) win.hide()
   })
 
   loadRenderer(win, 'popup')

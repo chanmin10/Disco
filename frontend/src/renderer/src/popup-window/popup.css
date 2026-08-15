@@ -10,3 +10,7 @@ body {
 #root {
   height: auto;
 }
+
+#popup-textarea::placeholder {
+  color: #6e6e73;
+}

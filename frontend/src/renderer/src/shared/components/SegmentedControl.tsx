@@ -47,7 +47,11 @@ export function SegmentedControl({
                   ? 'rgba(255,255,255,0.55)'
                   : '#ffffff'
                 : 'transparent',
-              color: selected ? 'var(--text-primary)' : 'var(--text-secondary)',
+              color: selected
+                ? 'var(--text-primary)'
+                : compact
+                  ? '#54545a'
+                  : 'var(--text-secondary)',
               boxShadow: selected && !compact ? '0 1px 3px rgba(0,0,0,0.18)' : 'none'
             }}
           >

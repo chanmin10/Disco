@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"/>
+<style>
+  body { margin: 0; }
+  * { box-sizing: border-box; }
+  a { color: #0A84FF; text-decoration: none; }
+  a:hover { color: #0A84FF; opacity: 0.8; }
+  input::placeholder { color: #b0b0b6; }
+  @keyframes discoSpin { to { transform: rotate(360deg); } }
+  @keyframes discoPopIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</helmet>
+<div style="{{ outerWrapStyle }}">
+  <div style="{{ windowBoxStyle }}">
+    <div style="height:40px;flex-shrink:0;display:flex;align-items:center;border-bottom:1px solid rgba(0,0,0,0.08);background:#F7F7F8;position:relative;">
+      <div style="width:160px;flex-shrink:0;height:100%;display:flex;align-items:center;gap:8px;padding-left:20px;box-sizing:border-box;">
+        <div style="width:12px;height:12px;border-radius:50%;background:#FF5F57;"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:#FEBC2E;"></div>
+        <div style="width:12px;height:12px;border-radius:50%;background:#28C840;"></div>
+      </div>
+      <div style="position:absolute;left:0;right:0;text-align:center;font-size:13.5px;font-weight:600;color:#1d1d1f;pointer-events:none;">DISCO</div>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:22px 40px 22px;background:#EDEDF0;min-height:0;">
+      <div style="width:100%;max-width:392px;display:flex;flex-direction:column;gap:5px;margin-bottom:16px;flex-shrink:0;">
+        <span style="font-size:19px;font-weight:700;color:#1d1d1f;">{{ viewTitle }}</span>
+        <span style="font-size:12.5px;color:#86868b;line-height:1.5;">{{ viewSubtitle }}</span>
+      </div>
+
+      <div style="width:100%;max-width:392px;flex-shrink:0;">
+        <sc-if value="{{ hasBannerFormError }}" hint-placeholder-val="{{ false }}">
+          <div role="alert" aria-live="polite" style="display:flex;align-items:flex-start;gap:8px;background:#FEECEC;border:1px solid rgba(255,59,48,0.25);border-radius:9px;padding:11px 13px;margin-bottom:16px;">
+            <span style="width:16px;height:16px;border-radius:50%;background:#FF3B30;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">!</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+              <span style="font-size:12.5px;color:#8a2c26;line-height:1.4;">{{ formErrorText }}</span>
+              <sc-if value="{{ isNetworkError }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ retryLastAction }}" style="align-self:flex-start;height:32px;padding:0 12px;border-radius:7px;background:#FF3B30;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;">다시 시도</button>
+              </sc-if>
+              <sc-if value="{{ isTakenError }}" hint-placeholder-val="{{ false }}">
+                <button type="button" onClick="{{ goLoginWithCurrentEmail }}" style="align-self:flex-start;height:32px;padding:0 12px;border-radius:7px;background:none;border:1px solid rgba(255,59,48,0.4);color:#8a2c26;font-size:12px;font-weight:600;cursor:pointer;">이 이메일로 로그인하기</button>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ resetSuccessBanner }}" hint-placeholder-val="{{ false }}">
+          <div role="status" style="display:flex;align-items:center;gap:8px;background:#EAF9EE;border:1px solid rgba(52,199,89,0.3);border-radius:9px;padding:11px 13px;margin-bottom:16px;">
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;"><path d="M2 6.5l2.5 2.5L10 3" stroke="#248A3D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span style="font-size:12.5px;color:#1c5a30;">비밀번호가 변경되었습니다</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ lockoutActive }}" hint-placeholder-val="{{ false }}">
+          <div role="alert" aria-live="polite" style="display:flex;align-items:center;gap:8px;background:#FFF4E5;border:1px solid rgba(255,159,10,0.3);border-radius:9px;padding:11px 13px;margin-bottom:16px;">
+            <span style="width:16px;height:16px;border-radius:50%;background:#FF9F0A;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>
+            <span style="font-size:12.5px;color:#8a5a12;">{{ lockoutText }}</span>
+          </div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+        <form onSubmit="{{ submitLogin }}" noValidate="{{ true }}" style="width:100%;max-width:392px;display:flex;flex-direction:column;gap:13px;">
+          <div>
+            <label for="login-email" style="display:block;font-size:12.5px;font-weight:600;color:#3a3a3c;margin-bottom:6px;">이메일</label>
+            <input id="login-email" ref="{{ emailRef }}" type="email" inputmode="email" autocapitalize="off" autocorrect="off" autocomplete="username" placeholder="you@example.com" value="{{ loginEmailField.value }}" onChange="{{ loginEmailField.onChange }}" onBlur="{{ loginEmailField.onBlur }}" aria-invalid="{{ loginEmailField.invalid }}" aria-describedby="{{ loginEmailField.describedBy }}" style="width:100%;height:44px;border:1.5px solid {{ loginEmailField.borderColor }};border-radius:9px;padding:0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+            <div style="min-height:15px;margin-top:2px;">
+              <sc-if value="{{ loginEmailField.show }}" hint-placeholder-val="{{ false }}">
+                <span id="login-email-error" role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ loginEmailField.error }}</span>
+              </sc-if>
+            </div>
+          </div>
+          <div>
+            <label for="login-password" style="display:block;font-size:12.5px;font-weight:600;color:#3a3a3c;margin-bottom:6px;">비밀번호</label>
+            <div style="position:relative;">
+              <input id="login-password" ref="{{ passwordRef }}" type="{{ passwordType }}" autocomplete="current-password" placeholder="비밀번호" value="{{ loginPasswordField.value }}" onChange="{{ loginPasswordField.onChange }}" onBlur="{{ loginPasswordField.onBlur }}" aria-invalid="{{ loginPasswordField.invalid }}" aria-describedby="{{ loginPasswordField.describedBy }}" style="width:100%;height:44px;border:1.5px solid {{ loginPasswordField.borderColor }};border-radius:9px;padding:0 50px 0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+              <button type="button" aria-label="비밀번호 표시" onClick="{{ toggleShowPassword }}" style="position:absolute;right:0;top:0;bottom:0;width:44px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#86868b;">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z" stroke="currentColor" stroke-width="1.3"></path><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"></circle></svg>
+              </button>
+            </div>
+            <div style="min-height:17px;margin-top:5px;">
+              <sc-if value="{{ showLoginPasswordFieldError }}" hint-placeholder-val="{{ false }}">
+                <span id="login-password-error" role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ loginPasswordField.error }}</span>
+              </sc-if>
+              <sc-if value="{{ isInvalidCredError }}" hint-placeholder-val="{{ false }}">
+                <span role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ formErrorText }}</span>
+              </sc-if>
+            </div>
+            <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+              <button type="button" onClick="{{ goForgot }}" style="background:none;border:none;padding:0 2px;height:28px;display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:{{ accent }};cursor:pointer;">비밀번호를 잊으셨나요?</button>
+            </div>
+          </div>
+
+          <button type="submit" disabled="{{ isSubmitting }}" style="height:44px;border-radius:10px;background:{{ accent }};color:#fff;border:none;font-size:14.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <sc-if value="{{ isSubmitting }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" style="animation:discoSpin 0.7s linear infinite;color:#fff;"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="30 40"></circle></svg></sc-if>
+            {{ loginButtonLabel }}
+          </button>
+
+          <div style="display:flex;align-items:center;gap:10px;color:#c7c7cc;font-size:11.5px;">
+            <div style="flex:1;height:1px;background:rgba(0,0,0,0.1);"></div>간편 로그인<div style="flex:1;height:1px;background:rgba(0,0,0,0.1);"></div>
+          </div>
+
+          <div style="display:flex;gap:10px;">
+            <button type="button" onClick="{{ onSocialGoogle }}" disabled="{{ socialDisabled }}" style="flex:1;height:44px;border-radius:10px;border:1px solid rgba(0,0,0,0.14);background:#fff;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#3a3a3c;font-size:12.5px;font-weight:600;">
+              <sc-if value="{{ isGoogleLoading }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 16 16" style="animation:discoSpin 0.7s linear infinite;color:#86868b;"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="30 40"></circle></svg></sc-if>
+              <sc-if value="{{ isGoogleIdle }}" hint-placeholder-val="{{ true }}">
+                <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"></path><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"></path><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"></path><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"></path></svg>
+              </sc-if>
+              Google
+            </button>
+            <button type="button" onClick="{{ onSocialApple }}" disabled="{{ socialDisabled }}" style="flex:1;height:44px;border-radius:10px;border:1px solid rgba(0,0,0,0.14);background:#fff;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#3a3a3c;font-size:12.5px;font-weight:600;">
+              <sc-if value="{{ isAppleLoading }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 16 16" style="animation:discoSpin 0.7s linear infinite;color:#86868b;"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="30 40"></circle></svg></sc-if>
+              <sc-if value="{{ isAppleIdle }}" hint-placeholder-val="{{ true }}">
+                <svg width="16" height="18" viewBox="0 0 384 512" fill="#1d1d1f"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1-2 49.9-15.2 69.5-34.3z"></path></svg>
+              </sc-if>
+              Apple
+            </button>
+          </div>
+
+          <div style="text-align:center;font-size:12.5px;color:#86868b;padding-top:4px;">
+            계정이 없으신가요? <button type="button" onClick="{{ goSignup }}" style="background:none;border:none;padding:2px 4px;font-size:12.5px;font-weight:700;color:{{ accent }};cursor:pointer;">회원가입</button>
+          </div>
+        </form>
+      </sc-if>
+
+      <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+        <form onSubmit="{{ submitSignup }}" noValidate="{{ true }}" style="width:100%;max-width:392px;display:flex;flex-direction:column;gap:13px;">
+          <div>
+            <label for="signup-email" style="display:block;font-size:12.5px;font-weight:600;color:#3a3a3c;margin-bottom:6px;">이메일</label>
+            <div style="display:flex;gap:8px;">
+              <div style="position:relative;flex:1;min-width:0;">
+                <input id="signup-email" ref="{{ emailRef }}" type="email" inputmode="email" autocapitalize="off" autocorrect="off" autocomplete="username" placeholder="you@example.com" value="{{ signupEmailField.value }}" onChange="{{ signupEmailField.onChange }}" onBlur="{{ signupEmailField.onBlur }}" aria-invalid="{{ signupEmailField.invalid }}" aria-describedby="{{ signupEmailField.describedBy }}" style="width:100%;height:44px;border:1.5px solid {{ signupEmailField.borderColor }};border-radius:9px;padding:0 40px 0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+                <div style="position:absolute;right:13px;top:0;bottom:0;display:flex;align-items:center;">
+                  <sc-if value="{{ emailChecking }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 16 16" style="animation:discoSpin 0.7s linear infinite;color:#86868b;"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="30 40"></circle></svg></sc-if>
+                  <sc-if value="{{ emailAvailable }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 12 12" fill="none"><path d="M2 6.5l2.5 2.5L10 3" stroke="#34C759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                </div>
+              </div>
+              <sc-if value="{{ isEmailVerifyIdle }}" hint-placeholder-val="{{ true }}">
+                <button type="button" onClick="{{ sendEmailVerification }}" style="height:44px;padding:0 14px;border-radius:9px;border:1px solid {{ emailVerifyBtnBorder }};background:{{ emailVerifyBtnBg }};color:{{ emailVerifyBtnColor }};font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">{{ emailVerifyBtnLabel }}</button>
+              </sc-if>
+              <sc-if value="{{ isEmailVerified }}" hint-placeholder-val="{{ false }}">
+                <span style="height:44px;padding:0 12px;border-radius:9px;background:#EAF9EE;color:#248A3D;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;flex-shrink:0;white-space:nowrap;">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5l2.5 2.5L10 3" stroke="#248A3D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  인증 완료
+                </span>
+              </sc-if>
+            </div>
+            <div style="min-height:17px;margin-top:5px;">
+              <sc-if value="{{ signupEmailField.show }}" hint-placeholder-val="{{ false }}">
+                <span id="signup-email-error" role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ signupEmailField.error }}</span>
+              </sc-if>
+              <sc-if value="{{ showEmailVerifyRequiredError }}" hint-placeholder-val="{{ false }}">
+                <span role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ emailVerifyRequiredErrorText }}</span>
+              </sc-if>
+            </div>
+            <sc-if value="{{ isEmailVerifySent }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:8px;">
+                <label for="signup-email-code" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">이메일 인증번호</label>
+                <input id="signup-email-code" ref="{{ emailVerifyCodeRef }}" type="text" inputmode="numeric" maxlength="6" placeholder="인증번호 6자리" value="{{ emailVerifyCode }}" onChange="{{ onEmailVerifyCodeChange }}" onKeyDown="{{ onEmailVerifyCodeKeyDown }}" style="flex:1;height:44px;border:1.5px solid {{ emailVerifyCodeBorderColor }};border-radius:9px;padding:0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+                <button type="button" onClick="{{ confirmEmailVerification }}" style="height:44px;padding:0 14px;border-radius:9px;background:{{ accent }};border:none;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">{{ confirmEmailVerifyLabel }}</button>
+              </div>
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-top:5px;">
+                <div style="min-height:17px;flex:1;">
+                  <sc-if value="{{ hasEmailVerifyError }}" hint-placeholder-val="{{ false }}">
+                    <span role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ emailVerifyError }}</span>
+                  </sc-if>
+                </div>
+                <button type="button" onClick="{{ resendEmailVerification }}" disabled="{{ emailVerifyResendDisabled }}" style="background:none;border:none;padding:0 2px;height:44px;display:inline-flex;align-items:center;font-size:11.5px;font-weight:600;color:{{ emailVerifyResendColor }};cursor:pointer;flex-shrink:0;white-space:nowrap;">{{ emailVerifyResendLabel }}</button>
+              </div>
+            </sc-if>
+          </div>
+
+          <div>
+            <label for="signup-password" style="display:block;font-size:12.5px;font-weight:600;color:#3a3a3c;margin-bottom:6px;">비밀번호</label>
+            <div style="position:relative;">
+              <input id="signup-password" ref="{{ passwordRef }}" type="{{ passwordType }}" autocomplete="new-password" placeholder="8자 이상, 영문/숫자/특수문자 조합" value="{{ signupPasswordField.value }}" onChange="{{ signupPasswordField.onChange }}" onBlur="{{ signupPasswordField.onBlur }}" aria-invalid="{{ signupPasswordField.invalid }}" aria-describedby="{{ signupPasswordField.describedBy }}" style="width:100%;height:44px;border:1.5px solid {{ signupPasswordField.borderColor }};border-radius:9px;padding:0 50px 0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+              <button type="button" aria-label="비밀번호 표시" onClick="{{ toggleShowPassword }}" style="position:absolute;right:0;top:0;bottom:0;width:44px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#86868b;">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z" stroke="currentColor" stroke-width="1.3"></path><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"></circle></svg>
+              </button>
+            </div>
+            <sc-if value="{{ hasStrength }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                <div style="display:flex;gap:4px;flex:1;">
+                  <sc-for list="{{ strengthBars }}" as="bar" hint-placeholder-count="3">
+                    <div style="flex:1;height:4px;border-radius:2px;background:{{ bar.color }};"></div>
+                  </sc-for>
+                </div>
+                <span style="font-size:11px;font-weight:600;color:{{ strengthLabelColor }};flex-shrink:0;">{{ strengthLabel }}</span>
+              </div>
+            </sc-if>
+            <div style="min-height:17px;margin-top:5px;">
+              <sc-if value="{{ signupPasswordField.show }}" hint-placeholder-val="{{ false }}">
+                <span id="signup-password-error" role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ signupPasswordField.error }}</span>
+              </sc-if>
+            </div>
+          </div>
+
+          <div>
+            <label for="signup-confirm-password" style="display:block;font-size:12.5px;font-weight:600;color:#3a3a3c;margin-bottom:6px;">비밀번호 확인</label>
+            <div style="position:relative;">
+              <input id="signup-confirm-password" ref="{{ confirmPasswordRef }}" type="{{ confirmPasswordType }}" autocomplete="new-password" placeholder="비밀번호를 다시 입력해주세요" value="{{ confirmPasswordField.value }}" onChange="{{ confirmPasswordField.onChange }}" onBlur="{{ confirmPasswordField.onBlur }}" aria-invalid="{{ confirmPasswordField.invalid }}" aria-describedby="{{ confirmPasswordField.describedBy }}" style="width:100%;height:44px;border:1.5px solid {{ confirmPasswordField.borderColor }};border-radius:9px;padding:0 50px 0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+              <button type="button" aria-label="비밀번호 확인 표시" onClick="{{ toggleShowConfirmPassword }}" style="position:absolute;right:0;top:0;bottom:0;width:44px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#86868b;">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z" stroke="currentColor" stroke-width="1.3"></path><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"></circle></svg>
+              </button>
+            </div>
+            <div style="min-height:17px;margin-top:5px;">
+              <sc-if value="{{ confirmPasswordField.show }}" hint-placeholder-val="{{ false }}">
+                <span id="confirm-password-error" role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ confirmPasswordField.error }}</span>
+              </sc-if>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;">
+            <label style="display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.08);">
+              <input type="checkbox" checked="{{ agreeAll }}" onChange="{{ onToggleAgreeAll }}" style="width:18px;height:18px;accent-color:{{ accent }};flex-shrink:0;"/>
+              <span style="font-size:13.5px;font-weight:700;color:#1d1d1f;">전체 동의</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;min-height:40px;cursor:pointer;">
+              <input type="checkbox" checked="{{ agreeTerms }}" onChange="{{ onToggleTerms }}" style="width:18px;height:18px;accent-color:{{ accent }};flex-shrink:0;"/>
+              <span style="font-size:12.5px;color:#3a3a3c;">[필수] 이용약관</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;min-height:40px;cursor:pointer;">
+              <input type="checkbox" checked="{{ agreePrivacy }}" onChange="{{ onTogglePrivacy }}" style="width:18px;height:18px;accent-color:{{ accent }};flex-shrink:0;"/>
+              <span style="font-size:12.5px;color:#3a3a3c;">[필수] 개인정보 처리방침</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;min-height:40px;cursor:pointer;">
+              <input type="checkbox" checked="{{ agreeMarketing }}" onChange="{{ onToggleMarketing }}" style="width:18px;height:18px;accent-color:{{ accent }};flex-shrink:0;"/>
+              <span style="font-size:12.5px;color:#3a3a3c;">[선택] 마케팅 정보 수신</span>
+            </label>
+            <div style="min-height:17px;margin-top:3px;">
+              <sc-if value="{{ hasTermsError }}" hint-placeholder-val="{{ false }}">
+                <span role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ termsError }}</span>
+              </sc-if>
+            </div>
+          </div>
+
+          <button type="submit" disabled="{{ isSubmitting }}" style="height:44px;border-radius:10px;background:{{ accent }};color:#fff;border:none;font-size:14.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <sc-if value="{{ isSubmitting }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" style="animation:discoSpin 0.7s linear infinite;color:#fff;"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="30 40"></circle></svg></sc-if>
+            {{ signupButtonLabel }}
+          </button>
+
+          <div style="text-align:center;font-size:12.5px;color:#86868b;">
+            이미 계정이 있으신가요? <button type="button" onClick="{{ goLogin }}" style="background:none;border:none;padding:2px 4px;font-size:12.5px;font-weight:700;color:{{ accent }};cursor:pointer;">로그인</button>
+          </div>
+        </form>
+      </sc-if>
+
+      <sc-if value="{{ isVerify }}" hint-placeholder-val="{{ false }}">
+        <form onSubmit="{{ submitVerify }}" noValidate="{{ true }}" style="width:100%;max-width:392px;display:flex;flex-direction:column;gap:18px;align-items:center;">
+          <div style="display:flex;gap:8px;">
+            <sc-for list="{{ verifyBoxes }}" as="box" hint-placeholder-count="6">
+              <input type="text" inputmode="numeric" maxlength="1" aria-label="{{ box.ariaLabel }}" ref="{{ box.ref }}" value="{{ box.value }}" onChange="{{ box.onChange }}" onKeyDown="{{ box.onKeyDown }}" onPaste="{{ box.onPaste }}" style="width:44px;height:52px;text-align:center;font-size:20px;font-weight:700;border:1.5px solid {{ box.borderColor }};border-radius:10px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+            </sc-for>
+          </div>
+          <div style="min-height:17px;">
+            <sc-if value="{{ hasVerifyError }}" hint-placeholder-val="{{ false }}">
+              <span role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ verifyError }}</span>
+            </sc-if>
+          </div>
+          <button type="submit" disabled="{{ isSubmitting }}" style="width:100%;height:44px;border-radius:10px;background:{{ accent }};color:#fff;border:none;font-size:14.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <sc-if value="{{ isSubmitting }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" style="animation:discoSpin 0.7s linear infinite;color:#fff;"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="30 40"></circle></svg></sc-if>
+            {{ verifyButtonLabel }}
+          </button>
+          <button type="button" onClick="{{ resendCode }}" disabled="{{ resendDisabled }}" style="background:none;border:none;font-size:12.5px;font-weight:600;color:{{ resendColor }};cursor:pointer;min-height:44px;">{{ resendLabel }}</button>
+        </form>
+      </sc-if>
+
+      <sc-if value="{{ isForgot }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ forgotSent }}" hint-placeholder-val="{{ false }}">
+          <div style="width:100%;max-width:392px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;">
+            <span style="width:40px;height:40px;border-radius:50%;background:#EAF9EE;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 12 12" fill="none"><path d="M2 6.5l2.5 2.5L10 3" stroke="#34C759" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            </span>
+            <span style="font-size:13.5px;color:#3a3a3c;line-height:1.6;">{{ forgotEmailValue }} 로<br/>재설정 링크를 보냈어요</span>
+            <button type="button" onClick="{{ openResetLink }}" style="width:100%;height:44px;border-radius:10px;background:{{ accent }};color:#fff;border:none;font-size:14.5px;font-weight:700;cursor:pointer;">재설정 링크 열기</button>
+            <span style="font-size:11px;color:#c7c7cc;">(프로토타입 전용 버튼입니다)</span>
+            <button type="button" onClick="{{ goLogin }}" style="background:none;border:none;font-size:12.5px;font-weight:600;color:{{ accent }};cursor:pointer;min-height:44px;">로그인으로 돌아가기</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ forgotNotSent }}" hint-placeholder-val="{{ true }}">
+          <form onSubmit="{{ submitForgot }}" noValidate="{{ true }}" style="width:100%;max-width:392px;display:flex;flex-direction:column;gap:13px;">
+            <div>
+              <label for="forgot-email" style="display:block;font-size:12.5px;font-weight:600;color:#3a3a3c;margin-bottom:6px;">이메일</label>
+              <input id="forgot-email" ref="{{ forgotEmailRef }}" type="email" inputmode="email" autocapitalize="off" autocorrect="off" autocomplete="username" placeholder="you@example.com" value="{{ forgotEmailField.value }}" onChange="{{ forgotEmailField.onChange }}" onBlur="{{ forgotEmailField.onBlur }}" aria-invalid="{{ forgotEmailField.invalid }}" aria-describedby="{{ forgotEmailField.describedBy }}" style="width:100%;height:44px;border:1.5px solid {{ forgotEmailField.borderColor }};border-radius:9px;padding:0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+              <div style="min-height:17px;margin-top:5px;">
+                <sc-if value="{{ forgotEmailField.show }}" hint-placeholder-val="{{ false }}">
+                  <span id="forgot-email-error" role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ forgotEmailField.error }}</span>
+                </sc-if>
+              </div>
+            </div>
+            <button type="submit" disabled="{{ isSubmitting }}" style="height:44px;border-radius:10px;background:{{ accent }};color:#fff;border:none;font-size:14.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+              <sc-if value="{{ isSubmitting }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" style="animation:discoSpin 0.7s linear infinite;color:#fff;"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="30 40"></circle></svg></sc-if>
+              {{ forgotButtonLabel }}
+            </button>
+            <button type="button" onClick="{{ goLogin }}" style="background:none;border:none;font-size:12.5px;font-weight:600;color:{{ accent }};cursor:pointer;min-height:44px;align-self:center;">로그인으로 돌아가기</button>
+          </form>
+        </sc-if>
+      </sc-if>
+
+      <sc-if value="{{ isReset }}" hint-placeholder-val="{{ false }}">
+        <form onSubmit="{{ submitReset }}" noValidate="{{ true }}" style="width:100%;max-width:392px;display:flex;flex-direction:column;gap:13px;">
+          <div>
+            <label for="new-password" style="display:block;font-size:12.5px;font-weight:600;color:#3a3a3c;margin-bottom:6px;">새 비밀번호</label>
+            <div style="position:relative;">
+              <input id="new-password" ref="{{ newPasswordRef }}" type="{{ newPasswordType }}" autocomplete="new-password" placeholder="8자 이상, 영문/숫자/특수문자 조합" value="{{ newPasswordField.value }}" onChange="{{ newPasswordField.onChange }}" onBlur="{{ newPasswordField.onBlur }}" aria-invalid="{{ newPasswordField.invalid }}" aria-describedby="{{ newPasswordField.describedBy }}" style="width:100%;height:44px;border:1.5px solid {{ newPasswordField.borderColor }};border-radius:9px;padding:0 50px 0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+              <button type="button" aria-label="비밀번호 표시" onClick="{{ toggleShowNewPassword }}" style="position:absolute;right:0;top:0;bottom:0;width:44px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#86868b;">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z" stroke="currentColor" stroke-width="1.3"></path><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"></circle></svg>
+              </button>
+            </div>
+            <sc-if value="{{ hasResetStrength }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                <div style="display:flex;gap:4px;flex:1;">
+                  <sc-for list="{{ strengthBars }}" as="bar" hint-placeholder-count="3">
+                    <div style="flex:1;height:4px;border-radius:2px;background:{{ bar.color }};"></div>
+                  </sc-for>
+                </div>
+                <span style="font-size:11px;font-weight:600;color:{{ strengthLabelColor }};flex-shrink:0;">{{ strengthLabel }}</span>
+              </div>
+            </sc-if>
+            <div style="min-height:17px;margin-top:5px;">
+              <sc-if value="{{ newPasswordField.show }}" hint-placeholder-val="{{ false }}">
+                <span id="new-password-error" role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ newPasswordField.error }}</span>
+              </sc-if>
+            </div>
+          </div>
+          <div>
+            <label for="confirm-new-password" style="display:block;font-size:12.5px;font-weight:600;color:#3a3a3c;margin-bottom:6px;">새 비밀번호 확인</label>
+            <div style="position:relative;">
+              <input id="confirm-new-password" ref="{{ confirmNewPasswordRef }}" type="{{ confirmNewPasswordType }}" autocomplete="new-password" placeholder="비밀번호를 다시 입력해주세요" value="{{ confirmNewPasswordField.value }}" onChange="{{ confirmNewPasswordField.onChange }}" onBlur="{{ confirmNewPasswordField.onBlur }}" aria-invalid="{{ confirmNewPasswordField.invalid }}" aria-describedby="{{ confirmNewPasswordField.describedBy }}" style="width:100%;height:44px;border:1.5px solid {{ confirmNewPasswordField.borderColor }};border-radius:9px;padding:0 50px 0 13px;font-size:14px;font-family:inherit;outline:none;background:#F7F7F8;color:#1d1d1f;" style-focus="border-color:{{ accent }};background:#ffffff;"/>
+              <button type="button" aria-label="비밀번호 확인 표시" onClick="{{ toggleShowConfirmNewPassword }}" style="position:absolute;right:0;top:0;bottom:0;width:44px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#86868b;">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z" stroke="currentColor" stroke-width="1.3"></path><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.3"></circle></svg>
+              </button>
+            </div>
+            <div style="min-height:17px;margin-top:5px;">
+              <sc-if value="{{ confirmNewPasswordField.show }}" hint-placeholder-val="{{ false }}">
+                <span id="confirm-new-password-error" role="alert" aria-live="polite" style="font-size:11.5px;color:#FF3B30;display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#FF3B30;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">!</span>{{ confirmNewPasswordField.error }}</span>
+              </sc-if>
+            </div>
+          </div>
+          <button type="submit" disabled="{{ isSubmitting }}" style="height:44px;border-radius:10px;background:{{ accent }};color:#fff;border:none;font-size:14.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <sc-if value="{{ isSubmitting }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" style="animation:discoSpin 0.7s linear infinite;color:#fff;"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="30 40"></circle></svg></sc-if>
+            {{ resetButtonLabel }}
+          </button>
+        </form>
+      </sc-if>
+
+      <sc-if value="{{ isSuccess }}" hint-placeholder-val="{{ false }}">
+        <div style="width:100%;max-width:392px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding-top:4px;">
+          <span style="width:56px;height:56px;border-radius:50%;background:{{ accent }};display:flex;align-items:center;justify-content:center;">
+            <svg width="26" height="26" viewBox="0 0 12 12" fill="none"><path d="M2 6.5l2.5 2.5L10 3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </span>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <span style="font-size:16px;font-weight:700;color:#1d1d1f;">{{ successEmail }}</span>
+            <span style="font-size:12.5px;color:#86868b;">로그인 완료 — 채팅방으로 이동할 준비가 됐어요</span>
+          </div>
+          <button type="button" onClick="{{ goToMain }}" style="height:44px;padding:0 20px;border-radius:10px;background:{{ accent }};border:none;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">이동하기</button>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="position:fixed;right:16px;bottom:16px;z-index:100;display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+    <sc-if value="{{ devPanelOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="width:260px;background:#1d1d1f;border-radius:12px;padding:14px;box-shadow:0 12px 30px rgba(0,0,0,0.35);display:flex;flex-direction:column;gap:8px;animation:discoPopIn 0.15s ease-out;">
+        <span style="font-size:11px;font-weight:700;color:#9a9aa0;text-transform:uppercase;letter-spacing:0.04em;">QA 시나리오</span>
+        <button type="button" onClick="{{ devFillSuccess }}" style="text-align:left;padding:8px 10px;border-radius:7px;background:#2c2c2e;color:#fff;border:none;font-size:12px;cursor:pointer;min-height:36px;">정상 로그인 — test@example.com</button>
+        <button type="button" onClick="{{ devFillLocked }}" style="text-align:left;padding:8px 10px;border-radius:7px;background:#2c2c2e;color:#fff;border:none;font-size:12px;cursor:pointer;min-height:36px;">계정 잠김 — locked@example.com</button>
+        <button type="button" onClick="{{ devFillTaken }}" style="text-align:left;padding:8px 10px;border-radius:7px;background:#2c2c2e;color:#fff;border:none;font-size:12px;cursor:pointer;min-height:36px;">중복 이메일 — taken@example.com</button>
+        <button type="button" onClick="{{ devFillServerError }}" style="text-align:left;padding:8px 10px;border-radius:7px;background:#2c2c2e;color:#fff;border:none;font-size:12px;cursor:pointer;min-height:36px;">서버 에러 — error@example.com</button>
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;background:#2c2c2e;cursor:pointer;margin-top:4px;min-height:36px;">
+          <span style="font-size:12px;color:#fff;">네트워크 오류 강제 발생</span>
+          <input type="checkbox" checked="{{ forceNetworkError }}" onChange="{{ toggleForceNetworkError }}" style="width:16px;height:16px;flex-shrink:0;"/>
+        </label>
+      </div>
+    </sc-if>
+    <button type="button" onClick="{{ toggleDevPanel }}" style="height:36px;padding:0 14px;border-radius:18px;background:#1d1d1f;color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,0.3);">{{ devPanelLabel }}</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;embedded&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;boolean&quot;}, &quot;onLoginSuccess&quot;: {&quot;editor&quot;: null, &quot;tsType&quot;: &quot;() =&gt; void&quot;}}">
+class Component extends DCLogic {
+  accentMap = { blue:'#0A84FF', purple:'#AF52DE', pink:'#FF375F', red:'#FF453A', orange:'#FF9F0A', yellow:'#FFD60A', green:'#32D74B', graphite:'#8E8E93' };
+  mockAccounts = { 'test@example.com': { password: 'Test1234!' } };
+
+  emailRef = React.createRef();
+  passwordRef = React.createRef();
+  confirmPasswordRef = React.createRef();
+  newPasswordRef = React.createRef();
+  confirmNewPasswordRef = React.createRef();
+  forgotEmailRef = React.createRef();
+  emailVerifyCodeRef = React.createRef();
+  codeRefs = [React.createRef(),React.createRef(),React.createRef(),React.createRef(),React.createRef(),React.createRef()];
+
+  state = {
+    view: 'login',
+    email: '', password: '', confirmPassword: '', newPassword: '', confirmNewPassword: '',
+    visibility: { password:false, confirmPassword:false, newPassword:false, confirmNewPassword:false },
+    agreeAll:false, agreeTerms:false, agreePrivacy:false, agreeMarketing:false,
+    touched: {},
+    emailAsyncStatus: null,
+    emailVerifyStep: 'idle',
+    emailVerifyCode: '',
+    emailVerifyError: null,
+    emailVerifySending: false,
+    emailVerifyResendCooldown: 0,
+    formError: null,
+    isSubmitting: false,
+    failedAttempts: 0,
+    lockoutRemaining: 0,
+    verifyCode: ['','','','','',''],
+    verifyError: null,
+    resendCooldown: 0,
+    forgotSent: false,
+    resetSuccessBanner: false,
+    socialLoading: null,
+    lastSocialProvider: null,
+    devPanelOpen: false,
+    forceNetworkError: false,
+  };
+
+  componentDidMount() {
+    requestAnimationFrame(() => this.focusFirstFieldOf(this.state.view));
+  }
+  componentWillUnmount() {
+    clearTimeout(this._reqTimer); clearTimeout(this._emailCheckTimer); clearTimeout(this._emailCheckTimer2); clearTimeout(this._socialTimer);
+    clearTimeout(this._emailVerifySendTimer); clearTimeout(this._emailVerifyConfirmTimer);
+    clearInterval(this._lockoutInterval); clearInterval(this._resendInterval); clearInterval(this._emailVerifyResendInterval);
+  }
+
+  validateEmail(v) {
+    const trimmed = (v || '').trim();
+    if (!trimmed) return '이메일을 입력해주세요';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return '올바른 이메일 형식이 아닙니다';
+    return null;
+  }
+  validateSignupPassword(v) {
+    if (!v || v.length < 8) return '8자 이상 입력해주세요';
+    let kinds = 0;
+    if (/[a-zA-Z]/.test(v)) kinds++;
+    if (/[0-9]/.test(v)) kinds++;
+    if (/[^a-zA-Z0-9]/.test(v)) kinds++;
+    if (kinds < 2) return '영문, 숫자, 특수문자 중 2가지 이상 조합해주세요';
+    return null;
+  }
+  computeStrength(v) {
+    if (!v) return 0;
+    let kinds = 0;
+    if (/[a-z]/.test(v)) kinds++;
+    if (/[A-Z]/.test(v)) kinds++;
+    if (/[0-9]/.test(v)) kinds++;
+    if (/[^a-zA-Z0-9]/.test(v)) kinds++;
+    if (v.length < 8) return 1;
+    if (v.length >= 12 && kinds >= 3) return 3;
+    if (kinds >= 2) return 2;
+    return 1;
+  }
+  randDelay() { return 800 + Math.random()*700; }
+
+  computeErrors() {
+    const emailFmt = this.validateEmail(this.state.email);
+    return {
+      loginEmail: emailFmt,
+      loginPassword: this.state.password ? null : '비밀번호를 입력해주세요',
+      signupEmail: emailFmt || (this.state.emailAsyncStatus === 'taken' ? '이미 가입된 이메일입니다' : null),
+      signupPassword: this.validateSignupPassword(this.state.password),
+      confirmPassword: this.state.confirmPassword !== this.state.password ? '비밀번호가 일치하지 않습니다' : null,
+      terms: (!this.state.agreeTerms || !this.state.agreePrivacy) ? '필수 약관에 동의해주세요' : null,
+      emailVerify: this.state.emailVerifyStep === 'verified' ? null : '이메일 인증을 완료해주세요',
+      forgotEmail: emailFmt,
+      newPassword: this.validateSignupPassword(this.state.newPassword),
+      confirmNewPassword: this.state.confirmNewPassword !== this.state.newPassword ? '비밀번호가 일치하지 않습니다' : null,
+    };
+  }
+
+  fieldRefMap() {
+    return { loginEmail:this.emailRef, loginPassword:this.passwordRef, signupEmail:this.emailRef, signupPassword:this.passwordRef, confirmPassword:this.confirmPasswordRef, forgotEmail:this.forgotEmailRef, newPassword:this.newPasswordRef, confirmNewPassword:this.confirmNewPasswordRef };
+  }
+  focusField(key) { const r = this.fieldRefMap()[key]; if (r && r.current) r.current.focus(); }
+
+  goToView = (view) => {
+    clearTimeout(this._reqTimer);
+    this.setState({ view, formError:null, touched:{}, isSubmitting:false }, () => {
+      requestAnimationFrame(() => this.focusFirstFieldOf(view));
+    });
+  };
+  focusFirstFieldOf(view) {
+    const map = { login:this.emailRef, signup:this.emailRef, verify:this.codeRefs[0], forgot:this.forgotEmailRef, reset:this.newPasswordRef };
+    const ref = map[view];
+    if (ref && ref.current) ref.current.focus();
+  }
+
+  bumpFailedAttempts() {
+    const attempts = this.state.failedAttempts + 1;
+    if (attempts >= 5) {
+      this.setState({ failedAttempts: 0 });
+      this.startLockout(30);
+    } else {
+      this.setState({ failedAttempts: attempts });
+    }
+  }
+  startLockout(seconds) {
+    this.setState({ lockoutRemaining: seconds });
+    clearInterval(this._lockoutInterval);
+    this._lockoutInterval = setInterval(() => {
+      this.setState(s => {
+        const next = s.lockoutRemaining - 1;
+        if (next <= 0) { clearInterval(this._lockoutInterval); return { lockoutRemaining:0 }; }
+        return { lockoutRemaining: next };
+      });
+    }, 1000);
+  }
+  startResendCooldown() {
+    this.setState({ resendCooldown: 60 });
+    clearInterval(this._resendInterval);
+    this._resendInterval = setInterval(() => {
+      this.setState(s => {
+        const next = s.resendCooldown - 1;
+        if (next <= 0) { clearInterval(this._resendInterval); return { resendCooldown:0 }; }
+        return { resendCooldown: next };
+      });
+    }, 1000);
+  }
+
+  onLoginEmailChange = (e) => this.setState({ email: e.target.value, formError:null, resetSuccessBanner:false });
+  onLoginEmailBlur = () => this.setState(s => ({ email: s.email.trim() }));
+  onLoginPasswordChange = (e) => this.setState({ password: e.target.value, formError:null, resetSuccessBanner:false });
+  onLoginPasswordBlur = () => {};
+
+  submitLogin = (e) => {
+    if (e) e.preventDefault();
+    if (this.state.isSubmitting || this.state.lockoutRemaining > 0) return;
+    const errors = this.computeErrors();
+    const order = ['loginEmail','loginPassword'];
+    const first = order.find(k => errors[k]);
+    this.setState(s => ({ touched: { ...s.touched, loginEmail:true, loginPassword:true } }));
+    if (first) { this.focusField(first); return; }
+    this.requestLogin();
+  };
+  requestLogin = () => {
+    if (this.state.isSubmitting) return;
+    this.setState({ isSubmitting:true, formError:null });
+    const emailKey = this.state.email.trim().toLowerCase();
+    const password = this.state.password;
+    const forceNet = this.state.forceNetworkError;
+    clearTimeout(this._reqTimer);
+    this._reqTimer = setTimeout(() => {
+      if (forceNet) { this.setState({ isSubmitting:false, formError:{kind:'network', text:'연결에 실패했습니다'} }); return; }
+      if (emailKey === 'error@example.com') { this.setState({ isSubmitting:false, formError:{kind:'server', text:'일시적인 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요'} }); this.bumpFailedAttempts(); return; }
+      if (emailKey === 'locked@example.com') { this.setState({ isSubmitting:false, formError:{kind:'locked', text:'계정이 잠겼습니다. 고객센터에 문의해주세요'} }); this.bumpFailedAttempts(); return; }
+      const acct = this.mockAccounts[emailKey];
+      if (acct && acct.password === password) {
+        this.setState({ isSubmitting:false, failedAttempts:0 });
+        this.goToView('success');
+        return;
+      }
+      this.setState({ isSubmitting:false, formError:{kind:'invalid', text:'이메일 또는 비밀번호가 올바르지 않습니다'}, password:'' });
+      this.bumpFailedAttempts();
+      requestAnimationFrame(() => this.passwordRef.current && this.passwordRef.current.focus());
+    }, this.randDelay());
+  };
+
+  scheduleEmailCheck(value) {
+    clearTimeout(this._emailCheckTimer); clearTimeout(this._emailCheckTimer2);
+    if (this.validateEmail(value)) return;
+    this._emailCheckTimer = setTimeout(() => {
+      this.setState({ emailAsyncStatus:'checking' });
+      this._emailCheckTimer2 = setTimeout(() => {
+        const key = value.trim().toLowerCase();
+        this.setState(s => ({ emailAsyncStatus: key==='taken@example.com' ? 'taken':'available', touched:{...s.touched, signupEmail:true} }));
+      }, 350);
+    }, 500);
+  }
+  onSignupEmailChange = (e) => {
+    const value = e.target.value;
+    this.setState({ email: value, emailAsyncStatus:null, formError:null, emailVerifyStep:'idle', emailVerifyCode:'', emailVerifyError:null });
+    clearInterval(this._emailVerifyResendInterval);
+    this.scheduleEmailCheck(value);
+  };
+
+  sendEmailVerification = () => {
+    const fmtErr = this.validateEmail(this.state.email);
+    if (fmtErr || this.state.emailAsyncStatus === 'taken') {
+      this.setState(s => ({ touched: { ...s.touched, signupEmail:true } }));
+      this.focusField('signupEmail');
+      return;
+    }
+    if (this.state.emailVerifySending || this.state.emailVerifyStep !== 'idle') return;
+    this.setState({ emailVerifySending:true });
+    clearTimeout(this._emailVerifySendTimer);
+    this._emailVerifySendTimer = setTimeout(() => {
+      this.setState({ emailVerifySending:false, emailVerifyStep:'sent', emailVerifyCode:'', emailVerifyError:null });
+      this.startEmailVerifyCooldown();
+      requestAnimationFrame(() => this.emailVerifyCodeRef.current && this.emailVerifyCodeRef.current.focus());
+    }, this.randDelay());
+  };
+  startEmailVerifyCooldown() {
+    this.setState({ emailVerifyResendCooldown: 60 });
+    clearInterval(this._emailVerifyResendInterval);
+    this._emailVerifyResendInterval = setInterval(() => {
+      this.setState(s => {
+        const next = s.emailVerifyResendCooldown - 1;
+        if (next <= 0) { clearInterval(this._emailVerifyResendInterval); return { emailVerifyResendCooldown:0 }; }
+        return { emailVerifyResendCooldown: next };
+      });
+    }, 1000);
+  }
+  onEmailVerifyCodeChange = (e) => {
+    const val = e.target.value.replace(/[^0-9]/g,'').slice(0,6);
+    this.setState({ emailVerifyCode: val, emailVerifyError:null });
+  };
+  onEmailVerifyCodeKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); this.confirmEmailVerification(); }
+  };
+  confirmEmailVerification = () => {
+    if (this.state.emailVerifySending) return;
+    if (this.state.emailVerifyCode.length < 6) { this.setState({ emailVerifyError:'6자리를 모두 입력해주세요' }); return; }
+    this.setState({ emailVerifySending:true, emailVerifyError:null });
+    clearTimeout(this._emailVerifyConfirmTimer);
+    this._emailVerifyConfirmTimer = setTimeout(() => {
+      if (this.state.emailVerifyCode === '123456') {
+        this.setState({ emailVerifySending:false, emailVerifyStep:'verified' });
+        clearInterval(this._emailVerifyResendInterval);
+      } else {
+        this.setState({ emailVerifySending:false, emailVerifyCode:'', emailVerifyError:'인증번호가 올바르지 않습니다' });
+      }
+    }, this.randDelay());
+  };
+  onSignupEmailBlur = () => this.setState(s => ({ email: s.email.trim(), touched: { ...s.touched, signupEmail:true } }));
+  onSignupPasswordChange = (e) => this.setState({ password: e.target.value, formError:null });
+  onSignupPasswordBlur = () => this.setState(s => ({ touched: { ...s.touched, signupPassword:true } }));
+  onConfirmPasswordChange = (e) => this.setState({ confirmPassword: e.target.value });
+  onConfirmPasswordBlur = () => this.setState(s => ({ touched: { ...s.touched, confirmPassword:true } }));
+
+  toggleAgreeAll(checked) {
+    this.setState(s => ({ agreeAll: checked, agreeTerms: checked, agreePrivacy: checked, agreeMarketing: checked, touched: { ...s.touched, terms:true } }));
+  }
+  toggleAgreeOne(key, checked) {
+    this.setState(s => {
+      const next = { agreeTerms:s.agreeTerms, agreePrivacy:s.agreePrivacy, agreeMarketing:s.agreeMarketing, [key]: checked };
+      const all = next.agreeTerms && next.agreePrivacy && next.agreeMarketing;
+      return { [key]: checked, agreeAll: all, touched: { ...s.touched, terms:true } };
+    });
+  }
+
+  submitSignup = (e) => {
+    if (e) e.preventDefault();
+    if (this.state.isSubmitting) return;
+    const errors = this.computeErrors();
+    const order = ['signupEmail','emailVerify','signupPassword','confirmPassword','terms'];
+    const first = order.find(k => errors[k]);
+    this.setState(s => ({ touched: { ...s.touched, signupEmail:true, emailVerify:true, signupPassword:true, confirmPassword:true, terms:true } }));
+    if (first) {
+      if (first === 'signupEmail' && this.state.emailAsyncStatus === 'taken') {
+        this.setState({ formError: { kind:'taken', text:'이미 가입된 이메일입니다' } });
+      }
+      if (first !== 'terms' && first !== 'emailVerify') this.focusField(first);
+      return;
+    }
+    this.requestSignup();
+  };
+  requestSignup = () => {
+    if (this.state.isSubmitting) return;
+    this.setState({ isSubmitting:true, formError:null });
+    const emailKey = this.state.email.trim().toLowerCase();
+    const password = this.state.password;
+    const forceNet = this.state.forceNetworkError;
+    clearTimeout(this._reqTimer);
+    this._reqTimer = setTimeout(() => {
+      if (forceNet) { this.setState({ isSubmitting:false, formError:{kind:'network', text:'연결에 실패했습니다'} }); return; }
+      if (emailKey === 'error@example.com') { this.setState({ isSubmitting:false, formError:{kind:'server', text:'일시적인 서버 오류가 발생했습니다'} }); return; }
+      if (emailKey === 'taken@example.com' || this.mockAccounts[emailKey]) {
+        this.setState({ isSubmitting:false, formError:{kind:'taken', text:'이미 가입된 이메일입니다'} });
+        return;
+      }
+      this.mockAccounts[emailKey] = { password };
+      this.setState({ isSubmitting:false });
+      this.goToView('success');
+    }, this.randDelay());
+  };
+
+  onCodeChange = (i, e) => {
+    const raw = e.target.value.replace(/[^0-9]/g,'');
+    const val = raw.slice(-1);
+    const codes = [...this.state.verifyCode];
+    codes[i] = val;
+    this.setState({ verifyCode: codes, verifyError:null }, () => {
+      if (val && i < 5) this.codeRefs[i+1].current.focus();
+      if (this.state.verifyCode.every(c => c !== '')) this.requestVerify();
+    });
+  };
+  onCodeKeyDown = (i, e) => {
+    if (e.key === 'Backspace' && !this.state.verifyCode[i] && i > 0) {
+      e.preventDefault();
+      const codes = [...this.state.verifyCode];
+      codes[i-1] = '';
+      this.setState({ verifyCode: codes });
+      this.codeRefs[i-1].current.focus();
+    }
+  };
+  onCodePaste = (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g,'');
+    if (!text) return;
+    const chars = text.slice(0,6).split('');
+    const codes = ['','','','','',''];
+    chars.forEach((c,idx) => { codes[idx] = c; });
+    this.setState({ verifyCode: codes, verifyError:null }, () => {
+      const nextIdx = Math.min(chars.length, 5);
+      if (this.codeRefs[nextIdx].current) this.codeRefs[nextIdx].current.focus();
+      if (chars.length >= 6) this.requestVerify();
+    });
+  };
+  submitVerify = (e) => {
+    if (e) e.preventDefault();
+    if (this.state.isSubmitting) return;
+    if (this.state.verifyCode.join('').length < 6) { this.setState({ verifyError:'6자리를 모두 입력해주세요' }); return; }
+    this.requestVerify();
+  };
+  requestVerify = () => {
+    if (this.state.isSubmitting) return;
+    this.setState({ isSubmitting:true, verifyError:null, formError:null });
+    const forceNet = this.state.forceNetworkError;
+    const code = this.state.verifyCode.join('');
+    clearTimeout(this._reqTimer);
+    this._reqTimer = setTimeout(() => {
+      if (forceNet) { this.setState({ isSubmitting:false, formError:{kind:'network', text:'연결에 실패했습니다'} }); return; }
+      if (code === '123456') { this.setState({ isSubmitting:false }); this.goToView('success'); return; }
+      this.setState({ isSubmitting:false, verifyCode:['','','','','',''], verifyError:'인증 코드가 올바르지 않습니다' });
+      requestAnimationFrame(() => this.codeRefs[0].current && this.codeRefs[0].current.focus());
+    }, this.randDelay());
+  };
+  resendCode = () => {
+    if (this.state.resendCooldown > 0) return;
+    this.startResendCooldown();
+    this.setState({ verifyCode:['','','','','',''], verifyError:null });
+    requestAnimationFrame(() => this.codeRefs[0].current && this.codeRefs[0].current.focus());
+  };
+
+  onForgotEmailChange = (e) => this.setState({ email: e.target.value, formError:null });
+  onForgotEmailBlur = () => this.setState(s => ({ email: s.email.trim(), touched: { ...s.touched, forgotEmail:true } }));
+  submitForgot = (e) => {
+    if (e) e.preventDefault();
+    if (this.state.isSubmitting) return;
+    const errors = this.computeErrors();
+    this.setState(s => ({ touched: { ...s.touched, forgotEmail:true } }));
+    if (errors.forgotEmail) { this.focusField('forgotEmail'); return; }
+    this.requestForgot();
+  };
+  requestForgot = () => {
+    if (this.state.isSubmitting) return;
+    this.setState({ isSubmitting:true, formError:null });
+    const forceNet = this.state.forceNetworkError;
+    clearTimeout(this._reqTimer);
+    this._reqTimer = setTimeout(() => {
+      if (forceNet) { this.setState({ isSubmitting:false, formError:{kind:'network', text:'연결에 실패했습니다'} }); return; }
+      this.setState({ isSubmitting:false, forgotSent:true });
+    }, this.randDelay());
+  };
+  openResetLink = () => { this.setState({ forgotSent:false }); this.goToView('reset'); };
+
+  onNewPasswordChange = (e) => this.setState({ newPassword: e.target.value, formError:null });
+  onNewPasswordBlur = () => this.setState(s => ({ touched: { ...s.touched, newPassword:true } }));
+  onConfirmNewPasswordChange = (e) => this.setState({ confirmNewPassword: e.target.value });
+  onConfirmNewPasswordBlur = () => this.setState(s => ({ touched: { ...s.touched, confirmNewPassword:true } }));
+  submitReset = (e) => {
+    if (e) e.preventDefault();
+    if (this.state.isSubmitting) return;
+    const errors = this.computeErrors();
+    const order = ['newPassword','confirmNewPassword'];
+    const first = order.find(k => errors[k]);
+    this.setState(s => ({ touched: { ...s.touched, newPassword:true, confirmNewPassword:true } }));
+    if (first) { this.focusField(first); return; }
+    this.requestReset();
+  };
+  requestReset = () => {
+    if (this.state.isSubmitting) return;
+    this.setState({ isSubmitting:true, formError:null });
+    const forceNet = this.state.forceNetworkError;
+    const emailKey = this.state.email.trim().toLowerCase();
+    const newPw = this.state.newPassword;
+    clearTimeout(this._reqTimer);
+    this._reqTimer = setTimeout(() => {
+      if (forceNet) { this.setState({ isSubmitting:false, formError:{kind:'network', text:'연결에 실패했습니다'} }); return; }
+      this.mockAccounts[emailKey] = { password: newPw };
+      this.setState({ isSubmitting:false, newPassword:'', confirmNewPassword:'', password:'' });
+      this.goToView('login');
+      this.setState({ resetSuccessBanner:true });
+    }, this.randDelay());
+  };
+
+  togglePasswordVisibility(key) {
+    const refMap = { password:this.passwordRef, confirmPassword:this.confirmPasswordRef, newPassword:this.newPasswordRef, confirmNewPassword:this.confirmNewPasswordRef };
+    const ref = refMap[key];
+    let start=null,end=null;
+    if (ref.current) { try { start = ref.current.selectionStart; end = ref.current.selectionEnd; } catch(err) {} }
+    this.setState(s => ({ visibility: { ...s.visibility, [key]: !s.visibility[key] } }), () => {
+      if (ref.current) {
+        ref.current.focus();
+        if (start !== null) { try { ref.current.setSelectionRange(start, end); } catch(err) {} }
+      }
+    });
+  }
+
+  onSocialClick = (provider) => {
+    if (this.state.isSubmitting || this.state.socialLoading) return;
+    this.setState({ socialLoading: provider, lastSocialProvider: provider, formError:null });
+    clearTimeout(this._socialTimer);
+    this._socialTimer = setTimeout(() => {
+      if (this.state.forceNetworkError) { this.setState({ socialLoading:null, formError:{kind:'network', text:'연결에 실패했습니다'} }); return; }
+      this.setState({ socialLoading:null });
+      this.goToView('success');
+    }, this.randDelay());
+  };
+
+  logout = () => { this.setState({ password:'', failedAttempts:0, lockoutRemaining:0 }); this.goToView('login'); };
+  goToMain = () => {
+    if (this.props.onLoginSuccess) { this.props.onLoginSuccess(); return; }
+    window.location.href = './Main Window.dc.html';
+  };
+
+  retryLastAction = () => {
+    const v = this.state.view;
+    if (v==='login') this.requestLogin();
+    else if (v==='signup') this.requestSignup();
+    else if (v==='verify') this.requestVerify();
+    else if (v==='forgot') this.requestForgot();
+    else if (v==='reset') this.requestReset();
+    else if (this.state.lastSocialProvider) this.onSocialClick(this.state.lastSocialProvider);
+  };
+
+  devFillSuccess = () => { this.goToView('login'); this.setState({ email:'test@example.com', password:'Test1234!' }); };
+  devFillLocked = () => { this.goToView('login'); this.setState({ email:'locked@example.com', password:'anypass1' }); };
+  devFillTaken = () => { this.goToView('signup'); this.setState({ email:'taken@example.com' }); this.scheduleEmailCheck('taken@example.com'); };
+  devFillServerError = () => { this.goToView('login'); this.setState({ email:'error@example.com', password:'anypass1' }); };
+  toggleForceNetworkError = () => this.setState(s => ({ forceNetworkError: !s.forceNetworkError }));
+  toggleDevPanel = () => this.setState(s => ({ devPanelOpen: !s.devPanelOpen }));
+
+  viewTitle() {
+    return { login:'로그인', signup:'회원가입', verify:'이메일 인증', forgot:'비밀번호 찾기', reset:'새 비밀번호 설정', success:'환영합니다' }[this.state.view];
+  }
+  viewSubtitle() {
+    switch (this.state.view) {
+      case 'login': return '';
+      case 'signup': return '몇 가지 정보만 입력하면 바로 시작할 수 있어요';
+      case 'verify': return (this.state.email || '가입하신 이메일') + '로 전송된 인증코드 6자리를 입력해주세요';
+      case 'forgot': return '가입하신 이메일로 재설정 링크를 보내드려요';
+      case 'reset': return '새로 사용할 비밀번호를 설정해주세요';
+      default: return '';
+    }
+  }
+
+  renderVals() {
+    const accent = '#0A84FF';
+    const embedded = !!this.props.embedded;
+    const outerWrapStyle = embedded
+      ? "width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;"
+      : "width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#e7e7ea;font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;padding:4px;";
+    const windowBoxStyle = embedded
+      ? "width:460px;max-height:100%;border-radius:12px;overflow:hidden;background:#ffffff;box-shadow:0 30px 70px rgba(0,0,0,0.5);display:flex;flex-direction:column;position:relative;"
+      : "width:500px;max-height:calc(100vh - 8px);border-radius:12px;overflow:hidden;background:#ffffff;box-shadow:0 1px 0 rgba(0,0,0,0.06),0 30px 60px rgba(0,0,0,0.28),0 0 0 1px rgba(0,0,0,0.06);display:flex;flex-direction:column;position:relative;";
+    const danger = '#FF3B30';
+    const warn = '#FF9F0A';
+    const success = '#34C759';
+    const borderDefault = 'rgba(0,0,0,0.14)';
+    const errors = this.computeErrors();
+    const t = this.state.touched;
+
+    const mkField = (key, value, onChange, onBlur, errId) => {
+      const showErr = !!(t[key] && errors[key]);
+      return { value, error: errors[key] || '', show: showErr, borderColor: showErr ? danger : borderDefault, describedBy: showErr ? errId : null, invalid: showErr, onChange, onBlur };
+    };
+
+    const loginEmailField = mkField('loginEmail', this.state.email, this.onLoginEmailChange, this.onLoginEmailBlur, 'login-email-error');
+    const loginPasswordField = mkField('loginPassword', this.state.password, this.onLoginPasswordChange, this.onLoginPasswordBlur, 'login-password-error');
+    const signupEmailField = mkField('signupEmail', this.state.email, this.onSignupEmailChange, this.onSignupEmailBlur, 'signup-email-error');
+    const signupPasswordField = mkField('signupPassword', this.state.password, this.onSignupPasswordChange, this.onSignupPasswordBlur, 'signup-password-error');
+    const confirmPasswordField = mkField('confirmPassword', this.state.confirmPassword, this.onConfirmPasswordChange, this.onConfirmPasswordBlur, 'confirm-password-error');
+    const forgotEmailField = mkField('forgotEmail', this.state.email, this.onForgotEmailChange, this.onForgotEmailBlur, 'forgot-email-error');
+    const newPasswordField = mkField('newPassword', this.state.newPassword, this.onNewPasswordChange, this.onNewPasswordBlur, 'new-password-error');
+    const confirmNewPasswordField = mkField('confirmNewPassword', this.state.confirmNewPassword, this.onConfirmNewPasswordChange, this.onConfirmNewPasswordBlur, 'confirm-new-password-error');
+    const termsError = (t.terms && errors.terms) ? errors.terms : '';
+    const showEmailVerifyRequiredError = !!(t.emailVerify && errors.emailVerify);
+
+    const isResetView = this.state.view === 'reset';
+    const strengthSource = isResetView ? this.state.newPassword : this.state.password;
+    const strength = this.computeStrength(strengthSource);
+    const strengthColors = ['#e5e5e7','#e5e5e7','#e5e5e7'];
+    for (let i=0;i<strength;i++) strengthColors[i] = strength===1?danger:(strength===2?warn:success);
+    const strengthBars = strengthColors.map(c => ({ color:c }));
+    const strengthLabel = strength===1?'약함':strength===2?'보통':strength===3?'강함':'';
+    const strengthLabelColor = strength===1?danger:strength===2?warn:success;
+
+    const verifyBoxes = [0,1,2,3,4,5].map(i => ({
+      index:i, ref:this.codeRefs[i], value:this.state.verifyCode[i],
+      ariaLabel: '인증코드 ' + (i+1) + '번째 자리',
+      onChange:(e)=>this.onCodeChange(i,e), onKeyDown:(e)=>this.onCodeKeyDown(i,e), onPaste:this.onCodePaste,
+      borderColor: this.state.verifyError ? danger : borderDefault,
+    }));
+
+    const lockoutActive = this.state.lockoutRemaining > 0;
+
+    return {
+      accent,
+      outerWrapStyle,
+      windowBoxStyle,
+      isLogin: this.state.view==='login', isSignup: this.state.view==='signup', isVerify: this.state.view==='verify', isForgot: this.state.view==='forgot', isReset: this.state.view==='reset', isSuccess: this.state.view==='success',
+      emailRef: this.emailRef, passwordRef: this.passwordRef, confirmPasswordRef: this.confirmPasswordRef, newPasswordRef: this.newPasswordRef, confirmNewPasswordRef: this.confirmNewPasswordRef, forgotEmailRef: this.forgotEmailRef,
+      loginEmailField, loginPasswordField, signupEmailField, signupPasswordField, confirmPasswordField, forgotEmailField, newPasswordField, confirmNewPasswordField,
+      termsError, hasTermsError: !!termsError,
+      passwordType: this.state.visibility.password ? 'text' : 'password',
+      confirmPasswordType: this.state.visibility.confirmPassword ? 'text' : 'password',
+      newPasswordType: this.state.visibility.newPassword ? 'text' : 'password',
+      confirmNewPasswordType: this.state.visibility.confirmNewPassword ? 'text' : 'password',
+      toggleShowPassword: () => this.togglePasswordVisibility('password'),
+      toggleShowConfirmPassword: () => this.togglePasswordVisibility('confirmPassword'),
+      toggleShowNewPassword: () => this.togglePasswordVisibility('newPassword'),
+      toggleShowConfirmNewPassword: () => this.togglePasswordVisibility('confirmNewPassword'),
+      strengthBars, strengthLabel, strengthLabelColor,
+      hasStrength: !isResetView && this.state.password.length>0,
+      hasResetStrength: isResetView && this.state.newPassword.length>0,
+      agreeAll: this.state.agreeAll, agreeTerms: this.state.agreeTerms, agreePrivacy: this.state.agreePrivacy, agreeMarketing: this.state.agreeMarketing,
+      onToggleAgreeAll: (e) => this.toggleAgreeAll(e.target.checked),
+      onToggleTerms: (e) => this.toggleAgreeOne('agreeTerms', e.target.checked),
+      onTogglePrivacy: (e) => this.toggleAgreeOne('agreePrivacy', e.target.checked),
+      onToggleMarketing: (e) => this.toggleAgreeOne('agreeMarketing', e.target.checked),
+      isSubmitting: this.state.isSubmitting,
+      loginButtonLabel: this.state.isSubmitting ? '로그인 중…' : '로그인',
+      signupButtonLabel: this.state.isSubmitting ? '가입 중…' : '회원가입',
+      verifyButtonLabel: this.state.isSubmitting ? '확인 중…' : '확인',
+      forgotButtonLabel: this.state.isSubmitting ? '전송 중…' : '재설정 메일 보내기',
+      resetButtonLabel: this.state.isSubmitting ? '변경 중…' : '비밀번호 변경',
+      submitLogin: this.submitLogin, submitSignup: this.submitSignup, submitVerify: this.submitVerify, submitForgot: this.submitForgot, submitReset: this.submitReset,
+      goSignup: () => this.goToView('signup'), goLogin: () => this.goToView('login'), goForgot: () => this.goToView('forgot'),
+      goLoginWithCurrentEmail: () => this.goToView('login'),
+      hasFormError: !!this.state.formError,
+      isInvalidCredError: !!this.state.formError && this.state.formError.kind === 'invalid',
+      showLoginPasswordFieldError: loginPasswordField.show && !(this.state.formError && this.state.formError.kind === 'invalid'),
+      hasBannerFormError: !!this.state.formError && this.state.formError.kind !== 'invalid',
+      formErrorText: this.state.formError ? this.state.formError.text : '',
+      isNetworkError: !!this.state.formError && this.state.formError.kind === 'network',
+      isTakenError: !!this.state.formError && this.state.formError.kind === 'taken',
+      retryLastAction: this.retryLastAction,
+      resetSuccessBanner: this.state.resetSuccessBanner,
+      lockoutActive, lockoutText: this.state.lockoutRemaining + '초 후에 다시 시도해주세요',
+      emailChecking: this.state.emailAsyncStatus === 'checking', emailAvailable: this.state.emailAsyncStatus === 'available',
+      isEmailVerifyIdle: this.state.emailVerifyStep === 'idle', isEmailVerifySent: this.state.emailVerifyStep === 'sent', isEmailVerified: this.state.emailVerifyStep === 'verified',
+      emailVerifyBtnLabel: this.state.emailVerifySending ? '전송 중…' : '인증하기',
+      emailVerifyBtnBorder: this.state.email.trim() ? 'rgba(0,0,0,0.14)' : 'rgba(0,0,0,0.08)',
+      emailVerifyBtnBg: this.state.email.trim() ? '#fff' : '#F7F7F8',
+      emailVerifyBtnColor: this.state.email.trim() ? accent : '#c7c7cc',
+      sendEmailVerification: this.sendEmailVerification,
+      emailVerifyCode: this.state.emailVerifyCode, onEmailVerifyCodeChange: this.onEmailVerifyCodeChange, onEmailVerifyCodeKeyDown: this.onEmailVerifyCodeKeyDown,
+      emailVerifyCodeRef: this.emailVerifyCodeRef,
+      emailVerifyCodeBorderColor: this.state.emailVerifyError ? danger : borderDefault,
+      confirmEmailVerification: this.confirmEmailVerification,
+      confirmEmailVerifyLabel: this.state.emailVerifySending ? '확인 중…' : '확인',
+      hasEmailVerifyError: !!this.state.emailVerifyError, emailVerifyError: this.state.emailVerifyError || '',
+      resendEmailVerification: this.sendEmailVerification,
+      emailVerifyResendDisabled: this.state.emailVerifyResendCooldown > 0,
+      emailVerifyResendColor: this.state.emailVerifyResendCooldown > 0 ? '#c7c7cc' : accent,
+      emailVerifyResendLabel: this.state.emailVerifyResendCooldown > 0 ? ('재전송 (' + this.state.emailVerifyResendCooldown + '초)') : '재전송',
+      showEmailVerifyRequiredError, emailVerifyRequiredErrorText: errors.emailVerify || '',
+      verifyBoxes, verifyError: this.state.verifyError, hasVerifyError: !!this.state.verifyError,
+      resendCooldown: this.state.resendCooldown, resendDisabled: this.state.resendCooldown>0,
+      resendColor: this.state.resendCooldown>0 ? '#c7c7cc' : accent,
+      resendLabel: this.state.resendCooldown>0 ? ('재전송 (' + this.state.resendCooldown + '초)') : '코드 재전송',
+      resendCode: this.resendCode,
+      forgotSent: this.state.forgotSent, forgotNotSent: !this.state.forgotSent, forgotEmailValue: this.state.email,
+      openResetLink: this.openResetLink,
+      successEmail: this.state.email,
+      logout: this.logout, goToMain: this.goToMain,
+      isGoogleLoading: this.state.socialLoading==='google', isGoogleIdle: this.state.socialLoading!=='google',
+      isAppleLoading: this.state.socialLoading==='apple', isAppleIdle: this.state.socialLoading!=='apple',
+      socialDisabled: !!this.state.socialLoading || this.state.isSubmitting,
+      onSocialGoogle: () => this.onSocialClick('google'), onSocialApple: () => this.onSocialClick('apple'),
+      devPanelOpen: this.state.devPanelOpen, toggleDevPanel: this.toggleDevPanel, devPanelLabel: this.state.devPanelOpen ? '개발자 패널 닫기' : '개발자 패널',
+      forceNetworkError: this.state.forceNetworkError, toggleForceNetworkError: this.toggleForceNetworkError,
+      devFillSuccess: this.devFillSuccess, devFillLocked: this.devFillLocked, devFillTaken: this.devFillTaken, devFillServerError: this.devFillServerError,
+      viewTitle: this.viewTitle(), viewSubtitle: this.viewSubtitle(),
+    };
+  }
+}
+</script>
+</body>
+</html>

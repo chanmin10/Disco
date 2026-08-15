@@ -33,7 +33,9 @@ export function ChatInput({ disabled, onSend }: ChatInputProps): React.JSX.Eleme
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') send()
+          // Guard against IME composition (Korean/Japanese/Chinese input) firing an extra
+          // Enter keydown when confirming a composed character, which would send twice.
+          if (e.key === 'Enter' && !e.nativeEvent.isComposing) send()
         }}
         placeholder="번역할 텍스트 입력"
         style={{

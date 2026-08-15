@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from sqlalchemy import select
@@ -12,6 +13,19 @@ import json
 from uuid import UUID
 
 app = FastAPI()
+
+# The Electron frontend calls this API cross-origin (from a Vite dev server port
+# in development, or a file:// origin in production) and attaches an Authorization
+# header, which makes the browser send a CORS preflight OPTIONS request first.
+# Without this middleware FastAPI has no OPTIONS handler, so the preflight gets a
+# 405 and the real request never goes out.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Health Check
 @app.get("/health")

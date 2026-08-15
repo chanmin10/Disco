@@ -25,12 +25,45 @@ function SavedCheckmark(): React.JSX.Element {
   )
 }
 
+function ProcessingIndicator(): React.JSX.Element {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: 21 }}>
+      {[0, 0.15, 0.3].map((delay) => (
+        <span
+          key={delay}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: '#9a9aa0',
+            display: 'inline-block',
+            animation: `discoDotPulse 1.1s infinite ${delay}s`
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 interface ResultAreaProps {
   resultText: string | null
   showSaved: boolean
+  isTranslating: boolean
 }
 
-export function ResultArea({ resultText, showSaved }: ResultAreaProps): React.JSX.Element {
+export function ResultArea({
+  resultText,
+  showSaved,
+  isTranslating
+}: ResultAreaProps): React.JSX.Element {
+  if (isTranslating) {
+    return (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <ProcessingIndicator />
+      </div>
+    )
+  }
+
   if (resultText === null) {
     return (
       <div style={{ flex: 1, minWidth: 0 }}>

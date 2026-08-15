@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { LANGUAGE_OPTIONS } from '../../shared/types'
 
 interface NewThemeModalProps {
@@ -10,6 +10,10 @@ export function NewThemeModal({ onClose, onCreate }: NewThemeModalProps): React.
   const [name, setName] = useState('')
   const [language, setLanguage] = useState(LANGUAGE_OPTIONS[0].code)
   const nameRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    requestAnimationFrame(() => nameRef.current?.focus())
+  }, [])
 
   const submit = (): void => {
     const trimmed = name.trim()
@@ -68,7 +72,9 @@ export function NewThemeModal({ onClose, onCreate }: NewThemeModalProps): React.
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') submit()
+                // Guard against IME composition (Korean/Japanese/Chinese input) firing an extra
+                // Enter keydown when confirming a composed character, which would submit twice.
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit()
               }}
               placeholder="예: 여행, 운동, 요리"
               style={{
