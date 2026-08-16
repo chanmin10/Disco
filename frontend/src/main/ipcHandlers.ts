@@ -13,12 +13,6 @@ export function registerIpcHandlers(): void {
     return result
   })
 
-  ipcMain.handle('settings:getNativeLanguagePref', () => store.getNativeLanguagePref())
-
-  ipcMain.handle('settings:setNativeLanguagePref', (_event, lang: string) => {
-    store.setNativeLanguagePref(lang)
-  })
-
   ipcMain.handle('popup:hide', () => hidePopup())
 
   ipcMain.handle('popup:resize', (_event, height: number) => resizePopupHeight(height))

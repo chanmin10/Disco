@@ -1,3 +1,4 @@
+import Markdown from 'react-markdown'
 import type { ChatMessage } from '../../shared/types'
 
 export function MessageBubble({ message }: { message: ChatMessage }): React.JSX.Element {
@@ -17,7 +18,13 @@ export function MessageBubble({ message }: { message: ChatMessage }): React.JSX.
           wordBreak: 'break-word'
         }}
       >
-        {message.text}
+        {isUser ? (
+          message.text
+        ) : (
+          <div className="markdown-content">
+            <Markdown>{message.text}</Markdown>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { supabase } from '../../shared/supabaseClient'
 import { PasswordField } from '../components/PasswordField'
 import { PasswordStrengthBar } from '../components/PasswordStrengthBar'
 import { BannerError } from '../components/FormError'
+import { AUTH_CALLBACK_URL } from '../authCallbackUrl'
 
 interface SignupViewProps {
   onSwitchToLogin: () => void
@@ -29,7 +30,11 @@ export function SignupView({ onSwitchToLogin }: SignupViewProps): React.JSX.Elem
     }
 
     setSubmitting(true)
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: AUTH_CALLBACK_URL }
+    })
     setSubmitting(false)
 
     if (signUpError) {

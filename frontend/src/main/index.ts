@@ -3,6 +3,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { buildAppMenu } from './menu'
 import { registerIpcHandlers } from './ipcHandlers'
 import { createLoginWindow } from './windows/loginWindow'
+import { registerDeepLinkProtocol, flushPendingDeepLink } from './deepLink'
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.disco.app')
@@ -13,11 +14,13 @@ app.whenReady().then(() => {
 
   buildAppMenu()
   registerIpcHandlers()
+  registerDeepLinkProtocol()
 
   // No main-process Supabase client: the Login window's own renderer checks
   // supabase.auth.getSession() on mount and bounces itself to Main via
   // auth:notifyLoginSuccess if a session already exists.
   createLoginWindow()
+  flushPendingDeepLink()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

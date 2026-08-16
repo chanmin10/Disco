@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../../shared/supabaseClient'
 import { BannerError } from '../components/FormError'
+import { AUTH_CALLBACK_URL } from '../authCallbackUrl'
 
 interface ForgotPasswordViewProps {
   onSwitchToLogin: () => void
@@ -19,7 +20,9 @@ export function ForgotPasswordView({
     if (submitting) return
     setError(null)
     setSubmitting(true)
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email)
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: AUTH_CALLBACK_URL
+    })
     setSubmitting(false)
     if (resetError) {
       setError(resetError.message)

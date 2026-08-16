@@ -4,7 +4,7 @@ from re import I                # Case-insensitive flag for Regular Expression
 import uuid                     # Generates uuid
 
 # SQLAlchemy Package - Parsing Class to PostgreSQL
-from sqlalchemy import CheckConstraint, Column, String, Integer, DateTime, Text, ForeignKey # Core components for defining table schemas
+from sqlalchemy import CheckConstraint, Column, String, Integer, DateTime, Text, ForeignKey, Date # Core components for defining table schemas
 from sqlalchemy.dialects.postgresql import UUID             # PostgreSQL-specific UUID data type
 from sqlalchemy.orm import declarative_base                 # Function to create the base class for ORM models
 from sqlalchemy.sql import func                             # Provides built-in SQL functions
@@ -48,3 +48,18 @@ class VocabEntry(Base):
 
     __table_args__ = (
         Index('idx_vocab_theme', 'theme_id'),    )
+
+class Profile(Base):
+    __tablename__ = "profiles"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    plan = Column(String, nullable=False, default="free")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+class ApiUsage(Base):
+    __tablename__ = "api_usage"
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True, nullable=False)
+    date = Column(Date, primary_key=True, nullable=False)
+    ai_count = Column(Integer, nullable=False, default=0)
+    quick_count = Column(Integer, nullable=False, default=0)

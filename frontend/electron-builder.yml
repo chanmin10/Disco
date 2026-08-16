@@ -11,6 +11,10 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+protocols:
+  name: DISCO Auth Callback
+  schemes:
+    - disco
 win:
   executableName: frontend
 nsis:
