@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -11,6 +11,7 @@ import httpx
 import os
 import json
 from uuid import UUID
+from auth import get_current_user, check_and_increment
 
 app = FastAPI()
 
@@ -27,14 +28,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+public_router = APIRouter()
+private_router = APIRouter(dependencies=[Depends(get_current_user)])
+
 # Health Check
-@app.get("/health")
+@public_router.get("/health")
 async def heath_check(db: AsyncSession = Depends(get_db)):      # Invokes depends() before execution
     await db.execute(text("SELECT 1"))
     return {"status": "ok"}
 
-@app.post("/translate/quick", response_model=TranslateResponse)
-async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db)):
+@private_router.post("/translate/quick", response_model=TranslateResponse)
+async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
+    await check_and_increment("quick", user, db)
+
     theme = await db.get(Theme, request.theme_id)
     
     if theme is None:
@@ -86,7 +92,7 @@ async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db
                         text_target = text_target
                     )
 
-@app.post("/translate/classify", response_model = ClassifyResponse)
+@private_router.post("/translate/classify", response_model = ClassifyResponse)
 async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db)):
     theme = await db.get(Theme, request.theme_id)
 
@@ -139,8 +145,10 @@ async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db))
         
         return ClassifyResponse(is_vocab = parsed["is_vocab"])
 
-@app.post("/translate/ai", response_model=LLMResponse)
-async def translate_ai(request: LLMRequest, db: AsyncSession = Depends(get_db)):
+@private_router.post("/translate/ai", response_model=LLMResponse)
+async def translate_ai(request: LLMRequest, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
+    await check_and_increment("ai", user, db)
+
     theme = await db.get(Theme, request.theme_id)
 
     if theme is None:
@@ -198,7 +206,7 @@ async def translate_ai(request: LLMRequest, db: AsyncSession = Depends(get_db)):
 
         return LLMResponse(text = parsed_text)
 
-@app.post("/themes", response_model=ThemeResponse)
+@private_router.post("/themes", response_model=ThemeResponse)
 async def create_theme(request: ThemeRequest, db: AsyncSession = Depends(get_db)):
     theme = Theme(
         name = request.name,
@@ -210,14 +218,14 @@ async def create_theme(request: ThemeRequest, db: AsyncSession = Depends(get_db)
 
     return theme
 
-@app.get("/themes", response_model=list[ThemeResponse])
+@private_router.get("/themes", response_model=list[ThemeResponse])
 async def get_themes(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Theme))
     themes = result.scalars().all()
 
     return themes
 
-@app.get("/vocab", response_model=list[VocabResponse])
+@private_router.get("/vocab", response_model=list[VocabResponse])
 async def get_vocab(theme_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(VocabEntry).where(VocabEntry.theme_id == theme_id)
@@ -226,7 +234,7 @@ async def get_vocab(theme_id: UUID, db: AsyncSession = Depends(get_db)):
     
     return vocab
 
-@app.delete("/vocab/{entry_id}")
+@private_router.delete("/vocab/{entry_id}")
 async def delete_vocab(entry_id: UUID, db: AsyncSession = Depends(get_db)):
     entry = await db.get(VocabEntry, entry_id)
     
@@ -237,7 +245,7 @@ async def delete_vocab(entry_id: UUID, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"message": "Entry deleted successfully"}
 
-@app.delete("/themes/{theme_id}")
+@private_router.delete("/themes/{theme_id}")
 async def delete_theme(theme_id: UUID, db: AsyncSession = Depends(get_db)):
     theme = await db.get(Theme, theme_id)
     if theme is None:
@@ -246,3 +254,6 @@ async def delete_theme(theme_id: UUID, db: AsyncSession = Depends(get_db)):
     await db.delete(theme)
     await db.commit()
     return {"message": "Theme deleted successfully"}
+
+app.include_router(public_router)
+app.include_router(private_router)
