@@ -207,8 +207,9 @@ async def translate_ai(request: LLMRequest, db: AsyncSession = Depends(get_db), 
         return LLMResponse(text = parsed_text)
 
 @private_router.post("/themes", response_model=ThemeResponse)
-async def create_theme(request: ThemeRequest, db: AsyncSession = Depends(get_db)):
+async def create_theme(request: ThemeRequest, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     theme = Theme(
+        user_id = user.user.id,
         name = request.name,
         target_language = request.target_language
     )
@@ -219,8 +220,10 @@ async def create_theme(request: ThemeRequest, db: AsyncSession = Depends(get_db)
     return theme
 
 @private_router.get("/themes", response_model=list[ThemeResponse])
-async def get_themes(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Theme))
+async def get_themes(db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
+    result = await db.execute(
+        select(Theme).where(Theme.user_id == user.user.id)
+    )
     themes = result.scalars().all()
 
     return themes

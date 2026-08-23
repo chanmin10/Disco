@@ -22,6 +22,27 @@ client.interceptors.request.use(async (config) => {
   return config
 })
 
+// A stale/invalid Supabase token means the local session is no longer valid server-side —
+// clear it and bounce every window back to Login (same flow as AccountRow's manual logout).
+// Guarded so a burst of concurrent 401s only triggers this once.
+let handlingUnauthorized = false
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401 && !handlingUnauthorized) {
+      handlingUnauthorized = true
+      try {
+        await supabase.auth.signOut()
+        await window.api.notifyLogout()
+      } finally {
+        handlingUnauthorized = false
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export async function getThemes(): Promise<Theme[]> {
   const { data } = await client.get<Theme[]>('/themes')
   return data

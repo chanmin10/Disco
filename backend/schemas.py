@@ -11,6 +11,18 @@ class TranslateResponse(BaseModel):
     text_native: str
     text_target: str
 
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "response": "*Hello*의 뜻은 *안녕하세요*라는 뜻입니다.",
+                    "text_native": "안녕하세요",
+                    "text_target": "Hello"
+                }
+            ]
+        }
+    }
+
 class ClassifyRequest(BaseModel):
     theme_id: UUID
     text_native: str
