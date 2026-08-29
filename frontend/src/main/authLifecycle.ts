@@ -16,6 +16,7 @@ export function handleLogout(): void {
   unregisterGlobalShortcut()
   windowRegistry.settings?.close()
   windowRegistry.popup?.close()
-  windowRegistry.main?.close()
+  // destroy() (not close()) so the main window's 'close' hide-intercept is bypassed.
+  windowRegistry.main?.destroy()
   createLoginWindow()
 }

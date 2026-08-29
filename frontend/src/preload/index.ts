@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
   getShortcut: (): Promise<string> => ipcRenderer.invoke('settings:getShortcut'),
   setShortcut: (accelerator: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('settings:setShortcut', accelerator),

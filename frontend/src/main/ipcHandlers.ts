@@ -1,10 +1,12 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import * as store from './store'
 import { registerGlobalShortcut } from './shortcuts'
 import { hidePopup, resizePopupHeight } from './windows/popupWindow'
 import { handleLoginSuccess, handleLogout } from './authLifecycle'
 
 export function registerIpcHandlers(): void {
+  ipcMain.handle('app:getVersion', () => app.getVersion())
+
   ipcMain.handle('settings:getShortcut', () => store.getShortcut())
 
   ipcMain.handle('settings:setShortcut', (_event, accelerator: string) => {

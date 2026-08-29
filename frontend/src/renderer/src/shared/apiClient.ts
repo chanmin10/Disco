@@ -9,7 +9,7 @@ import type {
 } from './types'
 
 const client = axios.create({
-  baseURL: 'http://localhost:8000'
+  baseURL: import.meta.env.DEV ? 'http://localhost:8000' : 'https://disco-backend.fly.dev'
 })
 
 client.interceptors.request.use(async (config) => {

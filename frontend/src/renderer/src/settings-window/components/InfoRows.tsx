@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { SettingsRow } from './SettingsRow'
 
 const InfoIcon = (
@@ -9,12 +10,18 @@ const InfoIcon = (
 )
 
 export function VersionRow(): React.JSX.Element {
+  const [version, setVersion] = useState('')
+
+  useEffect(() => {
+    window.api.getAppVersion().then(setVersion)
+  }, [])
+
   return (
     <SettingsRow
       iconBg="#8E8E93"
       icon={InfoIcon}
       title="버전"
-      trailing={<span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>1.0.0 (MVP)</span>}
+      trailing={<span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>{version}</span>}
     />
   )
 }
@@ -26,7 +33,7 @@ export function ContactRow(): React.JSX.Element {
       icon={InfoIcon}
       title="문의"
       trailing={
-        <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>support@disco.app</span>
+        <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>jecham102@gmail.com</span>
       }
     />
   )

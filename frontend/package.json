@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
@@ -20,12 +20,25 @@
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux"
   },
+  "build": {
+    "appId": "com.disco.app",
+    "productName": "DISCO",
+    "mac": {
+      "category": "public.app-category.education"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "chanmin10",
+      "repo": "Disco"
+    }
+  },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@supabase/supabase-js": "^2.112.3",
     "axios": "^1.19.0",
     "electron-store": "^8.2.0",
+    "electron-updater": "^6.8.9",
     "pretendard": "^1.3.9",
     "react-markdown": "^10.1.0"
   },

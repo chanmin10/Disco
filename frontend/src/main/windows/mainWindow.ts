@@ -25,6 +25,16 @@ export function createMainWindow(): BrowserWindow {
   })
 
   win.on('ready-to-show', () => win.show())
+
+  // On macOS, closing the main window (red traffic light) should not sign the
+  // user out — hide it instead so `activate` (Dock click) can bring it back.
+  // Logout tears the window down for real via destroy(), which skips 'close'.
+  win.on('close', (event) => {
+    if (process.platform === 'darwin') {
+      event.preventDefault()
+      win.hide()
+    }
+  })
   win.on('closed', () => {
     windowRegistry.main = null
   })

@@ -2,8 +2,11 @@ import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { buildAppMenu } from './menu'
 import { registerIpcHandlers } from './ipcHandlers'
+import { createMainWindow } from './windows/mainWindow'
 import { createLoginWindow } from './windows/loginWindow'
+import { windowRegistry } from './windows/windowRegistry'
 import { registerDeepLinkProtocol, flushPendingDeepLink } from './deepLink'
+import { initAutoUpdater } from './updater'
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.disco.app')
@@ -21,9 +24,13 @@ app.whenReady().then(() => {
   // auth:notifyLoginSuccess if a session already exists.
   createLoginWindow()
   flushPendingDeepLink()
+  initAutoUpdater()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    // Main window closed (hidden, not destroyed - see mainWindow.ts) → bring it back.
+    if (windowRegistry.main) {
+      createMainWindow()
+    } else if (BrowserWindow.getAllWindows().length === 0) {
       createLoginWindow()
     }
   })
