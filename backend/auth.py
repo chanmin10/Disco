@@ -7,6 +7,7 @@ from datetime import date
 from models import ApiUsage
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import asyncio
 
 AI_LIMIT = 20
 QUICK_LIMIT = 100
@@ -23,7 +24,7 @@ security = HTTPBearer()
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     try:
-        user = supabase.auth.get_user(token)
+        user = await asyncio.to_thread(supabase.auth.get_user, token)
         return user
     except Exception:
         raise HTTPException(

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -12,8 +12,15 @@ import os
 import json
 from uuid import UUID
 from auth import get_current_user, check_and_increment
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.http_client = httpx.AsyncClient(timeout=30.0)
+    yield
+    await app.state.http_client.aclose()
+
+app = FastAPI(lifespan=lifespan)
 
 # The Electron frontend calls this API cross-origin (from a Vite dev server port
 # in development, or a file:// origin in production) and attaches an Authorization
@@ -38,63 +45,63 @@ async def heath_check(db: AsyncSession = Depends(get_db)):      # Invokes depend
     return {"status": "ok"}
 
 @private_router.post("/translate/quick", response_model=TranslateResponse)
-async def translate(request: TranslateRequest, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
+async def translate(request: Request, body: TranslateRequest, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
     await check_and_increment("quick", user, db)
 
-    theme = await db.get(Theme, request.theme_id)
+    theme = await db.get(Theme, body.theme_id)
     
     if theme is None:
         raise HTTPException(status_code=404, detail="Theme not found")
 
     translation_key = os.environ["GOOGLE_TRANSLATE_API_KEY"]
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-                "https://translation.googleapis.com/language/translate/v2",
-                params={"key": translation_key},
-                json={
-                    "q": request.text,
-                    "target": theme.target_language,
-                    "format": "text"
-                }
-            )
+    client = request.app.state.http_client
+    response = await client.post(
+            "https://translation.googleapis.com/language/translate/v2",
+            params={"key": translation_key},
+            json={
+                "q": body.text,
+                "target": theme.target_language,
+                "format": "text"
+            }
+        )
 
+    result = response.json()["data"]["translations"][0]
+    detectedSourceLanguage = result["detectedSourceLanguage"]
+    translatedText = result["translatedText"]
+
+    if detectedSourceLanguage == theme.target_language:
+        response = await client.post(
+            "https://translation.googleapis.com/language/translate/v2",
+            params={"key": translation_key},
+            json={
+                "q": body.text,
+                "source": theme.target_language,
+                "target": "ko",         # Sets user's native language to Korean for now
+                "format": "text"
+            }
+        )
+        
         result = response.json()["data"]["translations"][0]
-        detectedSourceLanguage = result["detectedSourceLanguage"]
         translatedText = result["translatedText"]
 
-        if detectedSourceLanguage == theme.target_language:
-            response = await client.post(
-                "https://translation.googleapis.com/language/translate/v2",
-                params={"key": translation_key},
-                json={
-                    "q": request.text,
-                    "source": theme.target_language,
-                    "target": "ko",         # Sets user's native language to Korean for now
-                    "format": "text"
-                }
-            )
-            
-            result = response.json()["data"]["translations"][0]
-            translatedText = result["translatedText"]
-
-            text_native, text_target = translatedText, request.text 
-            return TranslateResponse(
-                        response = text_native,
-                        text_native = text_native,
-                        text_target = text_target
-                    )
-        else:
-            text_native, text_target = request.text, translatedText
-            return TranslateResponse(
-                        response = text_target,
-                        text_native = text_native,
-                        text_target = text_target
-                    )
+        text_native, text_target = translatedText, body.text 
+        return TranslateResponse(
+                    response = text_native,
+                    text_native = text_native,
+                    text_target = text_target
+                )
+    else:
+        text_native, text_target = body.text, translatedText
+        return TranslateResponse(
+                    response = text_target,
+                    text_native = text_native,
+                    text_target = text_target
+                )
 
 @private_router.post("/translate/classify", response_model = ClassifyResponse)
-async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db)):
-    theme = await db.get(Theme, request.theme_id)
+async def classify(request: Request, body: ClassifyRequest, db: AsyncSession = Depends(get_db)):
+    theme = await db.get(Theme, body.theme_id)
 
     if theme is None:
         raise HTTPException(status_code=404, detail="Theme not found")
@@ -102,46 +109,47 @@ async def classify(request: ClassifyRequest, db: AsyncSession = Depends(get_db))
     gemini_key = os.environ["GEMINI_API_KEY"]
     prompt = VOCAB_CLASSIFIER_PROMPT\
             .replace("{{language_pair}}", f"ko-{theme.target_language}")\
-            .replace("{{text_native}}", request.text_native)\
-            .replace("{{text_target}}", request.text_target)
+            .replace("{{text_native}}", body.text_native)\
+            .replace("{{text_target}}", body.text_target)
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        gemini_response = await client.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}",
-            json={
-                "contents": [                        
-                    {
-                        "parts": [{"text": prompt}]
-                    }
-                ]
-            }
-        )
-        
-        response_text = gemini_response.json()["candidates"][0]["content"]["parts"][0]["text"]
-        print(response_text)
-        parsed = json.loads(response_text)
+    client = request.app.state.http_client
+    gemini_response = await client.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}",
+        json={
+            "contents": [                        
+                {
+                    "parts": [{"text": prompt}]
+                }
+            ]
+        }
+    )
+    print(gemini_response.json())
+    
+    response_text = gemini_response.json()["candidates"][0]["content"]["parts"][0]["text"]
+    print(response_text)
+    parsed = json.loads(response_text)
 
-        if parsed["is_vocab"]:
-            existing = await db.execute(
-                select(VocabEntry).where(
-                    VocabEntry.theme_id == request.theme_id,
-                    VocabEntry.word_target == request.text_target
-                )
+    if parsed["is_vocab"]:
+        existing = await db.execute(
+            select(VocabEntry).where(
+                VocabEntry.theme_id == body.theme_id,
+                VocabEntry.word_target == body.text_target
             )
-            existing_entry = existing.scalar_one_or_none()
+        )
+        existing_entry = existing.scalar_one_or_none()
 
-            if existing_entry:
-                pass
-            else:
-                entry = VocabEntry(
-                    theme_id = request.theme_id,
-                    word_native = request.text_native,
-                    word_target = request.text_target,
-                    source_engine = "translation",
-                )
-                db.add(entry)
-                await db.commit()
-                await db.refresh(entry)
+        if existing_entry:
+            pass
+        else:
+            entry = VocabEntry(
+                theme_id = body.theme_id,
+                word_native = body.text_native,
+                word_target = body.text_target,
+                source_engine = "translation",
+            )
+            db.add(entry)
+            await db.commit()
+            await db.refresh(entry)
         
         return ClassifyResponse(is_vocab = parsed["is_vocab"])
 
