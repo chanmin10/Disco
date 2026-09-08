@@ -1,5 +1,6 @@
 import 'pretendard/dist/web/static/pretendard.css'
 import '../shared/tokens.css'
+import '../shared/markdown.css'
 import './popup.css'
 
 import { StrictMode } from 'react'

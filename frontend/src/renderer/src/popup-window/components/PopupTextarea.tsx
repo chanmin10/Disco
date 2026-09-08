@@ -11,13 +11,15 @@ interface PopupTextareaProps {
   onChange: (value: string) => void
   onToggleEngine: () => void
   onEnter: () => void
+  disabled?: boolean
 }
 
 export function PopupTextarea({
   value,
   onChange,
   onToggleEngine,
-  onEnter
+  onEnter,
+  disabled
 }: PopupTextareaProps): React.JSX.Element {
   const ref = useRef<HTMLTextAreaElement>(null)
 
@@ -40,6 +42,7 @@ export function PopupTextarea({
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault()
+          if (disabled) return
           // Guard against IME composition (Korean/Japanese/Chinese input) firing an extra
           // Enter keydown when confirming a composed character, which would submit twice.
           if (!e.nativeEvent.isComposing) onEnter()

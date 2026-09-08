@@ -1,3 +1,5 @@
+import Markdown from 'react-markdown'
+
 function SavedCheckmark(): React.JSX.Element {
   return (
     <span
@@ -75,7 +77,8 @@ export function ResultArea({
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}>
-        <span
+        <div
+          className="markdown-content"
           style={{
             fontSize: 15,
             color: 'var(--text-primary)',
@@ -84,8 +87,8 @@ export function ResultArea({
             wordBreak: 'break-word'
           }}
         >
-          {resultText}
-        </span>
+          <Markdown>{resultText}</Markdown>
+        </div>
         {showSaved && <SavedCheckmark />}
       </div>
     </div>

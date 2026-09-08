@@ -22,6 +22,7 @@ let mainWin: BrowserWindow | null = null
 let popupWin: BrowserWindow | null = null
 let settingsWin: BrowserWindow | null = null
 let loginWin: BrowserWindow | null = null
+let quitting = false
 
 export const windowRegistry = {
   get main(): BrowserWindow | null {
@@ -29,6 +30,14 @@ export const windowRegistry = {
   },
   set main(win: BrowserWindow | null) {
     mainWin = win
+  },
+  /** Set from `before-quit` so window close handlers can tell a real app quit
+   *  (Cmd+Q / Quit menu) apart from the user clicking a window's close button. */
+  get isQuitting(): boolean {
+    return quitting
+  },
+  set isQuitting(value: boolean) {
+    quitting = value
   },
   get popup(): BrowserWindow | null {
     return popupWin

@@ -78,7 +78,7 @@ function App(): React.JSX.Element {
   // input and immediately triggers the request (which is what shows the processing motion).
   const handleEnterSubmit = (): void => {
     const trimmed = text.trim()
-    if (!trimmed || !destinationThemeId) return
+    if (!trimmed || !destinationThemeId || isTranslating) return
     setText('')
     void runFor(destinationThemeId, trimmed, engine)
   }
@@ -150,6 +150,7 @@ function App(): React.JSX.Element {
             onChange={setText}
             onToggleEngine={() => setEngine((e) => (e === 'general' ? 'quick' : 'general'))}
             onEnter={handleEnterSubmit}
+            disabled={isTranslating || !destinationThemeId}
           />
         </div>
 

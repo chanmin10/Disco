@@ -29,8 +29,11 @@ export function createMainWindow(): BrowserWindow {
   // On macOS, closing the main window (red traffic light) should not sign the
   // user out — hide it instead so `activate` (Dock click) can bring it back.
   // Logout tears the window down for real via destroy(), which skips 'close'.
+  // A real app quit (Cmd+Q / Quit menu) also sends this window a 'close' event,
+  // so isQuitting (set from 'before-quit') lets that one through instead of
+  // getting hidden forever with the shortcut/popup still alive in the background.
   win.on('close', (event) => {
-    if (process.platform === 'darwin') {
+    if (process.platform === 'darwin' && !windowRegistry.isQuitting) {
       event.preventDefault()
       win.hide()
     }

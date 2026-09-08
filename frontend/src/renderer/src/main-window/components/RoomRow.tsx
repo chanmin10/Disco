@@ -26,20 +26,47 @@ export function RoomRow({ theme, active, onSelect, onDelete }: RoomRowProps): Re
         background: active ? 'var(--accent)' : 'var(--surface-sidebar-left)'
       }}
     >
-      <span
+      <div
         style={{
-          fontSize: 13,
-          color: active ? '#ffffff' : 'var(--text-primary)',
-          fontWeight: active ? 600 : 500,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
           flex: 1,
-          minWidth: 0
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3,
+          alignItems: 'flex-start'
         }}
       >
-        {theme.name}
-      </span>
+        <span
+          style={{
+            fontSize: 13,
+            color: active ? '#ffffff' : 'var(--text-primary)',
+            fontWeight: active ? 600 : 500,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '100%'
+          }}
+        >
+          {theme.name}
+        </span>
+        <span
+          style={{
+            fontSize: 10,
+            letterSpacing: 0.2,
+            color: active ? '#ffffff' : '#5f5f66',
+            background: active ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.07)',
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            padding: '1.5px 5px',
+            borderRadius: 4,
+            maxWidth: '100%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}
+        >
+          {theme.target_language}
+        </span>
+      </div>
       <div
         onClick={(e) => {
           e.stopPropagation()
