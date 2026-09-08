@@ -37,10 +37,7 @@ export function createPopupWindow(): BrowserWindow {
     show: false,
     frame: false,
     transparent: true,
-    // The window's real bounds are taller than the visible card (extra headroom reserved for
-    // the theme dropdown — see App.tsx), so a native OS shadow would trace that whole invisible
-    // rectangle and look like a stray border. The card draws its own CSS box-shadow instead.
-    hasShadow: false,
+    hasShadow: true,
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
