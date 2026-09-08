@@ -151,7 +151,7 @@ async def classify(request: Request, body: ClassifyRequest, db: AsyncSession = D
             await db.commit()
             await db.refresh(entry)
         
-        return ClassifyResponse(is_vocab = parsed["is_vocab"])
+    return ClassifyResponse(is_vocab = parsed["is_vocab"])
 
 @private_router.post("/translate/ai", response_model=LLMResponse)
 async def translate_ai(request: LLMRequest, db: AsyncSession = Depends(get_db), user = Depends(get_current_user)):
